@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 const dbURI =
-  "mongodb+srv://20sdev:vijay207@cluster0.hsy4w.mongodb.net/linkhub?retryWrites=true&w=majority";
+  "mongodb+srv://20sdev:vijay207@cluster0.hsy4w.mongodb.net/doctor?retryWrites=true&w=majority";
 
 export const connectDB = async () => {
   try {
