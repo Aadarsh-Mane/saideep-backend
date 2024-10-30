@@ -1,39 +1,66 @@
-import Doctor from "../../models/doctorSchema.js";
 import patientSchema from "../../models/patientSchema.js";
 
 export const addPatient = async (req, res) => {
-  const { name, age, gender, contact, address } = req.body;
+  const {
+    name,
+    age,
+    gender,
+    contact,
+    address,
+    reasonForAdmission,
+    symptoms,
+    initialDiagnosis,
+  } = req.body;
 
   try {
-    // Find existing patient by name and contact
     let patient = await patientSchema.findOne({ name, contact });
 
     if (patient) {
-      // If patient exists, add new admission record
-      patient.admissionRecords.push({ admissionDate: new Date() });
+      const lastAdmission =
+        patient.admissionRecords[patient.admissionRecords.length - 1]
+          .admissionDate;
+      const daysSinceLastAdmission = dayjs().diff(dayjs(lastAdmission), "day");
+
+      // Add new admission record with condition details
+      patient.admissionRecords.push({
+        admissionDate: new Date(),
+        reasonForAdmission,
+        symptoms,
+        initialDiagnosis,
+      });
       await patient.save();
+
       return res.status(200).json({
         message: `Patient ${name} readmitted successfully.`,
         patientDetails: patient,
+        daysSinceLastAdmission,
         admissionRecords: patient.admissionRecords,
       });
     }
 
-    // If patient does not exist, check if doctor exists by doctorId
+    // If patient does not exist, create a new one with a generated patientId
+    const patientId = generatePatientId(name);
 
-    // Create a new patient with the first admission record
     patient = new patientSchema({
+      patientId,
       name,
       age,
       gender,
       contact,
       address,
-      admissionRecords: [{ admissionDate: new Date() }],
+      admissionRecords: [
+        {
+          admissionDate: new Date(),
+          reasonForAdmission,
+          symptoms,
+          initialDiagnosis,
+        },
+      ],
     });
     await patient.save();
 
     res.status(201).json({
-      message: `Patient ${name} added successfully.`,
+      message: `Patient ${name} added successfully with ID ${patientId}.`,
       patientDetails: patient,
     });
   } catch (error) {
@@ -42,4 +69,9 @@ export const addPatient = async (req, res) => {
       .status(500)
       .json({ message: "Error adding patient", error: error.message });
   }
+};
+const generatePatientId = (name) => {
+  const initials = name.slice(0, 3).toUpperCase(); // First three letters of the name
+  const randomDigits = Math.floor(100 + Math.random() * 900); // Generate three random digits
+  return `${initials}${randomDigits}`;
 };

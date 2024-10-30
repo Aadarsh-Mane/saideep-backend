@@ -11,7 +11,7 @@ export const auth = (req, res, next) => {
       let user = jwt.verify(token, SECRET);
       req.userId = user.id;
       req.usertype = user.usertype; // Store usertype for access control
-
+      console.log(req.usertype);
       console.log(req.userId);
     } else {
       res.status(401).json({ message: "unauthorized user" });
