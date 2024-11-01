@@ -147,7 +147,7 @@ export const listDoctors = async (req, res) => {
     // Retrieve all doctors, with an option to filter by availability if required
     const doctors = await hospitalDoctors.find({
       usertype: "doctor",
-      available: true,
+      // available: true,
     });
 
     if (!doctors || doctors.length === 0) {
@@ -160,5 +160,23 @@ export const listDoctors = async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to retrieve doctors.", error: error.message });
+  }
+};
+// Controller to list all patients
+export const listPatients = async (req, res) => {
+  try {
+    // Retrieve all patients from the database
+    const patients = await patientSchema.find();
+
+    if (!patients || patients.length === 0) {
+      return res.status(404).json({ message: "No patients found." });
+    }
+
+    res.status(200).json({ patients });
+  } catch (error) {
+    console.error("Error listing patients:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to retrieve patients.", error: error.message });
   }
 };
