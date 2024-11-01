@@ -1,5 +1,6 @@
 import Appointment from "../../models/bookAppointmentSchema.js";
 import patientSchema from "../../models/patientSchema.js";
+import Doctor from "./../../models/doctorSchema";
 
 export const addPatient = async (req, res) => {
   const {
@@ -103,5 +104,39 @@ export const acceptAppointment = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error confirming appointment", error: error.message });
+  }
+};
+export const assignDoctor = async (req, res) => {
+  try {
+    const { patientId, doctorId, admissionId } = req.body;
+
+    // Find the patient
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the doctor
+    const doctor = await Doctor.findById(doctorId);
+    if (!doctor) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    // Check if admission record exists
+    const admissionRecord = patient.admissionRecords.id(admissionId);
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Assign doctor to admission record
+    admissionRecord.doctor = doctorId;
+    await patient.save();
+
+    return res
+      .status(200)
+      .json({ message: "Doctor assigned successfully", patient });
+  } catch (error) {
+    console.error("Error assigning doctor:", error);
+    return res.status(500).json({ message: "Server error", error });
   }
 };

@@ -120,3 +120,60 @@ export const dischargePatient = async (req, res) => {
       .json({ message: "Error discharging patient", error: error.message });
   }
 };
+
+export const getAssignedPatients = async (req, res) => {
+  try {
+    // Ensure the user is a doctor
+    if (req.usertype !== "doctor") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Fetch patients with admission records assigned to the doctor
+    const patients = await patientSchema
+      .find({ "admissionRecords.doctor": req.userId })
+      .populate("admissionRecords.doctor", "doctorName")
+      .populate("admissionRecords.reports", "reportDetails");
+
+    if (patients.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No patients assigned to this doctor" });
+    }
+
+    res.status(200).json({ patients });
+  } catch (error) {
+    console.error("Error fetching assigned patients:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+export const getPatientDetailsForDoctor = async (req, res) => {
+  try {
+    const { patientId } = req.params;
+
+    // Ensure the user is a doctor
+    if (req.usertype !== "doctor") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Find the patient with admission records assigned to the doctor
+    const patient = await patientSchema
+      .findOne({
+        patientId,
+        "admissionRecords.doctor": req.userId, // Match admissions where this doctor is assigned
+      })
+      .populate("admissionRecords.doctor", "doctorName") // Populate doctor details
+      .populate("admissionRecords.reports", "reportDetails") // Populate reports
+      .populate("admissionRecords.followUps.nurseId", "nurseName"); // Populate follow-up nurse details
+
+    if (!patient) {
+      return res
+        .status(404)
+        .json({ message: "Patient not found or not assigned to this doctor" });
+    }
+
+    res.status(200).json({ patient });
+  } catch (error) {
+    console.error("Error fetching patient details:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
