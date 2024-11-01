@@ -11,7 +11,7 @@ app.use(express.json());
 connectDB();
 app.use("/users", userRouter);
 app.use("/patient", patientRouter);
-app.use("/receiption", receiptionRouter);
+app.use("/reception", receiptionRouter);
 app.use("/doctors", doctorRouter);
 
 app.listen(port, () => {

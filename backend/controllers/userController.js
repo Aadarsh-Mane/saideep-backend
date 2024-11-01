@@ -8,15 +8,15 @@ import twilio from "twilio";
 
 const SECRET = "DOCTOR";
 
-export const signup = async (req, res) => {
+export const signupDoctor = async (req, res) => {
   const { email, password, usertype, doctorName } = req.body;
 
   try {
     // Check if doctor exists in the database by name and type
-    const doctor = await Doctor.findOne({ name: doctorName, type: usertype });
-    if (!doctor) {
-      return res.status(404).json({ message: "Doctor not found in system." });
-    }
+    // const doctor = await Doctor.findOne({ name: doctorName, type: usertype });
+    // if (!doctor) {
+    //   return res.status(404).json({ message: "Doctor not found in system." });
+    // }
 
     // Check if user with the provided email already exists
     const existingUser = await hospitalDoctors.findOne({ email });
@@ -30,7 +30,8 @@ export const signup = async (req, res) => {
       email,
       password: hashedPassword,
       usertype,
-      doctorName: doctor.name, // Link to doctor by name
+      doctorName,
+      // Link to doctor by name
     });
 
     // Generate JWT token
@@ -47,38 +48,7 @@ export const signup = async (req, res) => {
   }
 };
 
-export const signupNurse = async (req, res) => {
-  const { email, password, usertype } = req.body;
-
-  try {
-    // Check if a user with the provided email already exists
-    const existingUser = await Nurse.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "User already exists." });
-    }
-
-    // Hash the password and create the user
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const result = await Nurse.create({
-      email,
-      password: hashedPassword,
-      usertype, // Add usertype field if needed
-    });
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { email: result.email, id: result._id, usertype: result.usertype },
-      SECRET,
-      { expiresIn: "30d" }
-    );
-
-    res.status(201).json({ user: result, token });
-  } catch (error) {
-    console.error("Signup error:", error);
-    res.status(500).json({ message: "Signup failed.", error: error.message });
-  }
-};
-export const signin = async (req, res) => {
+export const signinDoctor = async (req, res) => {
   const { email, password } = req.body;
 
   try {
@@ -109,6 +79,37 @@ export const signin = async (req, res) => {
   } catch (error) {
     console.error("Signin error:", error);
     res.status(500).json({ message: "Signin failed", error: error.message });
+  }
+};
+export const signupNurse = async (req, res) => {
+  const { email, password, usertype } = req.body;
+
+  try {
+    // Check if a user with the provided email already exists
+    const existingUser = await Nurse.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists." });
+    }
+
+    // Hash the password and create the user
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const result = await Nurse.create({
+      email,
+      password: hashedPassword,
+      usertype, // Add usertype field if needed
+    });
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { email: result.email, id: result._id, usertype: result.usertype },
+      SECRET,
+      { expiresIn: "30d" }
+    );
+
+    res.status(201).json({ user: result, token });
+  } catch (error) {
+    console.error("Signup error:", error);
+    res.status(500).json({ message: "Signup failed.", error: error.message });
   }
 };
 export const signinNurse = async (req, res) => {

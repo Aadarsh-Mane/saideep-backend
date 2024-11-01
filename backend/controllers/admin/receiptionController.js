@@ -1,6 +1,7 @@
 import Appointment from "../../models/bookAppointmentSchema.js";
+import hospitalDoctors from "../../models/hospitalDoctorSchema.js";
 import patientSchema from "../../models/patientSchema.js";
-import Doctor from "./../../models/doctorSchema";
+import Doctor from "./../../models/doctorSchema.js";
 
 export const addPatient = async (req, res) => {
   const {
@@ -138,5 +139,26 @@ export const assignDoctor = async (req, res) => {
   } catch (error) {
     console.error("Error assigning doctor:", error);
     return res.status(500).json({ message: "Server error", error });
+  }
+};
+// Controller to list all available doctors
+export const listDoctors = async (req, res) => {
+  try {
+    // Retrieve all doctors, with an option to filter by availability if required
+    const doctors = await hospitalDoctors.find({
+      usertype: "doctor",
+      available: true,
+    });
+
+    if (!doctors || doctors.length === 0) {
+      return res.status(404).json({ message: "No available doctors found." });
+    }
+
+    res.status(200).json({ doctors });
+  } catch (error) {
+    console.error("Error listing doctors:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to retrieve doctors.", error: error.message });
   }
 };
