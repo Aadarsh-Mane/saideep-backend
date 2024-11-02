@@ -5,7 +5,7 @@ const followUpSchema = new mongoose.Schema({
     ref: "Nurse",
     required: true,
   }, // Nurse who recorded the follow-up
-  date: { type: Date, default: Date.now },
+  date: { type: String },
   notes: { type: String, required: true },
   observations: String,
 });
@@ -23,7 +23,10 @@ const patientSchema1 = new mongoose.Schema({
       reasonForAdmission: { type: String },
       symptoms: String,
       initialDiagnosis: String,
-      doctor: { type: mongoose.Schema.Types.ObjectId, ref: "hospitalDoctor" }, // Reference to the doctor
+      doctor: {
+        id: { type: mongoose.Schema.Types.ObjectId, ref: "hospitalDoctor" },
+        name: { type: String },
+      }, // Reference to the doctor
 
       reports: [{ type: mongoose.Schema.Types.ObjectId, ref: "PatientReport" }],
       followUps: [followUpSchema], // Array of follow-up records for each admission

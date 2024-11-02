@@ -109,7 +109,7 @@ export const acceptAppointment = async (req, res) => {
 };
 export const assignDoctor = async (req, res) => {
   try {
-    const { patientId, doctorId, admissionId } = req.body;
+    const { patientId, doctorId, admissionId, isReadmission } = req.body;
 
     // Find the patient
     const patient = await patientSchema.findOne({ patientId });
@@ -118,7 +118,7 @@ export const assignDoctor = async (req, res) => {
     }
 
     // Find the doctor
-    const doctor = await Doctor.findById(doctorId);
+    const doctor = await hospitalDoctors.findById(doctorId);
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
     }
@@ -129,8 +129,15 @@ export const assignDoctor = async (req, res) => {
       return res.status(404).json({ message: "Admission record not found" });
     }
 
-    // Assign doctor to admission record
-    admissionRecord.doctor = doctorId;
+    // If not a readmission, ensure no doctor is already assigned
+    if (!isReadmission && admissionRecord.doctor) {
+      return res
+        .status(400)
+        .json({ message: "Doctor is already assigned to this admission." });
+    }
+
+    // Assign doctor ID and name to the admission record
+    admissionRecord.doctor = { id: doctorId, name: doctor.doctorName };
     await patient.save();
 
     return res
@@ -138,9 +145,12 @@ export const assignDoctor = async (req, res) => {
       .json({ message: "Doctor assigned successfully", patient });
   } catch (error) {
     console.error("Error assigning doctor:", error);
-    return res.status(500).json({ message: "Server error", error });
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
+
 // Controller to list all available doctors
 export const listDoctors = async (req, res) => {
   try {

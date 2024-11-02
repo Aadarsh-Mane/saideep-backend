@@ -1,1 +1,3 @@
 node_modules
+controllers/nurseController.js
+routes/nurse.js

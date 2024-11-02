@@ -123,27 +123,30 @@ export const dischargePatient = async (req, res) => {
 
 export const getAssignedPatients = async (req, res) => {
   try {
-    // Ensure the user is a doctor
-    if (req.usertype !== "doctor") {
-      return res.status(403).json({ message: "Access denied" });
-    }
+    const doctorId = req.userId; // Get doctor ID from authenticated user
 
-    // Fetch patients with admission records assigned to the doctor
-    const patients = await patientSchema
-      .find({ "admissionRecords.doctor": req.userId })
-      .populate("admissionRecords.doctor", "doctorName")
-      .populate("admissionRecords.reports", "reportDetails");
+    // Find all patients with admission records assigned to this doctor
+    const patients = await patientSchema.find({
+      "admissionRecords.doctor.id": doctorId,
+    });
 
-    if (patients.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No patients assigned to this doctor" });
-    }
+    // Filter admission records specifically assigned to this doctor
+    const filteredPatients = patients.map((patient) => {
+      const relevantAdmissions = patient.admissionRecords.filter(
+        (record) => record.doctor && record.doctor.id.toString() === doctorId
+      );
+      return { ...patient.toObject(), admissionRecords: relevantAdmissions };
+    });
 
-    res.status(200).json({ patients });
+    res.status(200).json({
+      message: "Patients assigned to doctor retrieved successfully",
+      patients: filteredPatients,
+    });
   } catch (error) {
-    console.error("Error fetching assigned patients:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
+    console.error("Error retrieving assigned patients:", error);
+    res
+      .status(500)
+      .json({ message: "Error retrieving patients", error: error.message });
   }
 };
 export const getPatientDetailsForDoctor = async (req, res) => {

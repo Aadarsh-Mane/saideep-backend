@@ -1,10 +1,15 @@
 import express from "express";
-import { admitPatient, getPatients } from "../controllers/doctorController.js";
+import {
+  admitPatient,
+  getAssignedPatients,
+  getPatients,
+} from "../controllers/doctorController.js";
 import { auth } from "../middleware/auth.js";
 
 const doctorRouter = express.Router();
 
 doctorRouter.get("/getPatients", auth, getPatients);
+doctorRouter.get("/getAssignedPatients", auth, getAssignedPatients);
 doctorRouter.post("/admitPatient/:patientId", auth, admitPatient);
 
 // userRouter.get("/profile", auth, getUserProfile);
