@@ -2,6 +2,7 @@ import express from "express";
 import {
   admitPatient,
   getAssignedPatients,
+  getDoctorProfile,
   getPatients,
 } from "../controllers/doctorController.js";
 import { auth } from "../middleware/auth.js";
@@ -9,6 +10,7 @@ import { auth } from "../middleware/auth.js";
 const doctorRouter = express.Router();
 
 doctorRouter.get("/getPatients", auth, getPatients);
+doctorRouter.get("/getDoctorProfile", auth, getDoctorProfile);
 doctorRouter.get("/getAssignedPatients", auth, getAssignedPatients);
 doctorRouter.post("/admitPatient/:patientId", auth, admitPatient);
 

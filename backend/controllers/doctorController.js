@@ -180,3 +180,27 @@ export const getPatientDetailsForDoctor = async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 };
+
+export const getDoctorProfile = async (req, res) => {
+  const doctorId = req.userId; // Get doctorId from the request
+
+  try {
+    // Find the doctor by ID
+    const doctorProfile = await hospitalDoctors
+      .findById(doctorId)
+      .select("-password"); // Exclude password for security
+
+    // Check if doctor profile exists
+    if (!doctorProfile) {
+      return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    // Return doctor profile
+    return res.status(200).json({ doctorProfile });
+  } catch (error) {
+    console.error("Error fetching doctor profile:", error);
+    return res
+      .status(500)
+      .json({ message: "Error fetching doctor profile", error: error.message });
+  }
+};

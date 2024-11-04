@@ -260,13 +260,9 @@ export const verifyOTP = async (req, res) => {
     }
 
     // Generate JWT token
-    const token = jwt.sign(
-      { id: patient._id, usertype: "patient" },
-      process.env.SECRET,
-      {
-        expiresIn: "30d",
-      }
-    );
+    const token = jwt.sign({ id: patient._id, usertype: "patient" }, SECRET, {
+      expiresIn: "30d",
+    });
 
     // Clear the OTP after successful verification
     patient.otp = null;
