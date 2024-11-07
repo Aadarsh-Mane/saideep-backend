@@ -82,7 +82,7 @@ export const signinDoctor = async (req, res) => {
   }
 };
 export const signupNurse = async (req, res) => {
-  const { email, password, usertype } = req.body;
+  const { email, password, usertype, nurseName } = req.body;
 
   try {
     // Check if a user with the provided email already exists
@@ -97,6 +97,7 @@ export const signupNurse = async (req, res) => {
       email,
       password: hashedPassword,
       usertype, // Add usertype field if needed
+      nurseName,
     });
 
     // Generate JWT token

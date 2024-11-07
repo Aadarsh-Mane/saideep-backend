@@ -3,6 +3,7 @@ import {
   acceptAppointment,
   addPatient,
   assignDoctor,
+  getDoctorsPatient,
   listDoctors,
   listPatients,
 } from "../controllers/admin/receiptionController.js";
@@ -20,6 +21,10 @@ receiptionRouter.post("/addPatient", addPatient);
 receiptionRouter.get("/listDoctors", listDoctors);
 receiptionRouter.get("/listPatients", listPatients);
 receiptionRouter.post("/assign-Doctor", assignDoctor);
+receiptionRouter.get(
+  "/getPatientAssignedToDoctor/:doctorName",
+  getDoctorsPatient
+);
 receiptionRouter.post("/acceptAppointment", acceptAppointment);
 receiptionRouter.post("/addDoctorToPatient");
 

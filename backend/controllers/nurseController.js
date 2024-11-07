@@ -6,6 +6,13 @@ export const addFollowUp = async (req, res) => {
     const { patientId, admissionId, notes, observations } = req.body;
     const nurseId = req.userId; // Nurse ID from authenticated user
 
+    // Validate user type to ensure only nurses can add follow-ups
+    if (req.usertype !== "nurse") {
+      return res
+        .status(403)
+        .json({ message: "Access denied. Only nurses can add follow-ups." });
+    }
+
     // Validate nurse ID
     const nurse = await Nurse.findById(nurseId);
     if (!nurse) {
@@ -23,11 +30,12 @@ export const addFollowUp = async (req, res) => {
     if (!admissionRecord) {
       return res.status(404).json({ message: "Admission record not found" });
     }
+
     const dateInIST = new Date().toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
       hour12: false,
     });
-    console.log(dateInIST);
+
     // Add follow-up to the admission record
     admissionRecord.followUps.push({
       nurseId: nurseId,
@@ -39,13 +47,13 @@ export const addFollowUp = async (req, res) => {
     // Save the updated patient record
     await patient.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Follow-up added successfully",
       admissionRecord: admissionRecord,
     });
   } catch (error) {
     console.error("Error adding follow-up:", error);
-    res
+    return res
       .status(500)
       .json({ message: "Error adding follow-up", error: error.message });
   }
@@ -74,7 +82,14 @@ export const getLastFollowUpTime = async (req, res) => {
     // Get the last follow-up
     const lastFollowUp =
       admissionRecord.followUps[admissionRecord.followUps.length - 1];
-    const lastFollowUpDate = new Date(lastFollowUp.date);
+    const rawLastFollowUpDate = lastFollowUp.date; // The raw date string
+    console.log("Last Follow-Up Date (Raw):", rawLastFollowUpDate);
+
+    // Parse the raw date string into a Date object
+    const lastFollowUpDate = new Date(rawLastFollowUpDate);
+
+    // Log the parsed date
+    console.log("Parsed Last Follow-Up Date:", lastFollowUpDate);
 
     // Get the current time in Indian timezone
     const currentTime = new Date().toLocaleString("en-IN", {
@@ -90,13 +105,76 @@ export const getLastFollowUpTime = async (req, res) => {
 
     const timeSinceLastFollowUp = `${diffInHours} hours and ${minutesRemaining} minutes ago`;
 
-    res
-      .status(200)
-      .json({ message: "Last follow-up found", timeSinceLastFollowUp });
+    res.status(200).json({
+      message: "Last follow-up found",
+      lastFollowUpDate: lastFollowUpDate.toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        dateStyle: "short",
+        timeStyle: "long",
+      }), // Include formatted date
+      timeSinceLastFollowUp,
+    });
   } catch (error) {
     console.error("Error retrieving last follow-up:", error);
     res.status(500).json({
       message: "Error retrieving last follow-up",
+      error: error.message,
+    });
+  }
+};
+
+export const getNurseProfile = async (req, res) => {
+  const nurseId = req.userId; // Get nurseId from the request
+
+  try {
+    // Find the doctor by ID
+    const nurseProfile = await Nurse.findById(nurseId).select("-password"); // Exclude password for security
+
+    // Check if doctor profile exists
+    if (!nurseProfile) {
+      return res.status(404).json({ message: "nurse not found" });
+    }
+
+    // Return doctor profile
+    return res.status(200).json({ nurseProfile });
+  } catch (error) {
+    console.error("Error fetching nurse profile:", error);
+    return res
+      .status(500)
+      .json({ message: "Error fetching nurse profile", error: error.message });
+  }
+};
+export const getAdmissionRecordsById = async (req, res) => {
+  try {
+    const { admissionId } = req.params; // Get admissionId from URL parameters
+
+    // Find the patient by checking all admission records
+    const patient = await patientSchema.findOne({
+      "admissionRecords._id": admissionId,
+    });
+
+    // If the patient is not found
+    if (!patient) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Find the specific admission record
+    const admissionRecord = patient.admissionRecords.id(admissionId);
+
+    // If the admission record is not found
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Respond with the admission record
+    res.status(200).json({
+      message: "Admission record retrieved successfully.",
+      admissionRecord,
+    });
+  } catch (error) {
+    console.error("Error retrieving admission record:", error);
+    res.status(500).json({
+      message: "Error retrieving admission record.",
       error: error.message,
     });
   }

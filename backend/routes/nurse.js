@@ -4,13 +4,17 @@ import { signinDoctor, signinNurse } from "../controllers/userController.js";
 import { auth } from "./../middleware/auth.js";
 import {
   addFollowUp,
+  getAdmissionRecordsById,
   getLastFollowUpTime,
+  getNurseProfile,
 } from "../controllers/nurseController.js";
 
 const nurseRouter = express.Router();
 
 //nurseRouter.post("/signup", signup);
 nurseRouter.post("/signin", signinNurse);
+nurseRouter.get("/nurseProfile", auth, getNurseProfile);
+nurseRouter.get("/addmissionRecords/:admissionId", getAdmissionRecordsById);
 nurseRouter.post("/addFollowUp", auth, addFollowUp);
 nurseRouter.get("/lastFollowUp", getLastFollowUpTime);
 // nurseRouter.post("/signin", );

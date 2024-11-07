@@ -2,7 +2,7 @@ import Appointment from "../../models/bookAppointmentSchema.js";
 import hospitalDoctors from "../../models/hospitalDoctorSchema.js";
 import patientSchema from "../../models/patientSchema.js";
 import Doctor from "./../../models/doctorSchema.js";
-
+import dayjs from "dayjs";
 export const addPatient = async (req, res) => {
   const {
     name,
@@ -62,7 +62,7 @@ export const addPatient = async (req, res) => {
     });
     await patient.save();
 
-    res.status(201).json({
+    res.status(200).json({
       message: `Patient ${name} added successfully with ID ${patientId}.`,
       patientDetails: patient,
     });
@@ -110,6 +110,12 @@ export const acceptAppointment = async (req, res) => {
 export const assignDoctor = async (req, res) => {
   try {
     const { patientId, doctorId, admissionId, isReadmission } = req.body;
+    console.log("Assigning doctor:", {
+      patientId,
+      doctorId,
+      admissionId,
+      isReadmission,
+    });
 
     // Find the patient
     const patient = await patientSchema.findOne({ patientId });
@@ -128,13 +134,15 @@ export const assignDoctor = async (req, res) => {
     if (!admissionRecord) {
       return res.status(404).json({ message: "Admission record not found" });
     }
-
-    // If not a readmission, ensure no doctor is already assigned
-    if (!isReadmission && admissionRecord.doctor) {
-      return res
-        .status(400)
-        .json({ message: "Doctor is already assigned to this admission." });
-    }
+    console.log("Existing doctor in admission record:", admissionRecord.doctor);
+    // if (
+    //   admissionRecord.doctor &&
+    //   admissionRecord.doctor.id.toString() === doctorId
+    // ) {
+    //   return res.status(400).json({
+    //     message: "Doctor is already assigned to this specific admission.",
+    //   });
+    // }
 
     // Assign doctor ID and name to the admission record
     admissionRecord.doctor = { id: doctorId, name: doctor.doctorName };
@@ -188,5 +196,32 @@ export const listPatients = async (req, res) => {
     res
       .status(500)
       .json({ message: "Failed to retrieve patients.", error: error.message });
+  }
+};
+export const getDoctorsPatient = async (req, res) => {
+  try {
+    const { doctorName } = req.params; // Assuming doctor name is passed as a query parameter
+
+    // Find patients where any admission record has the specified doctor name
+    const patients = await patientSchema.find({
+      admissionRecords: {
+        $elemMatch: { "doctor.name": doctorName },
+      },
+    });
+
+    // If no patients are found, return a 404 message
+    if (!patients || patients.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No patients found for this doctor" });
+    }
+
+    // Return the list of patients assigned to this doctor
+    return res.status(200).json({ patients });
+  } catch (error) {
+    console.error("Error retrieving doctor's patients:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
