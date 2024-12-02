@@ -5,6 +5,7 @@ import { auth } from "./../middleware/auth.js";
 import {
   addFollowUp,
   getAdmissionRecordsById,
+  getFollowups,
   getLastFollowUpTime,
   getNurseProfile,
 } from "../controllers/nurseController.js";
@@ -17,6 +18,7 @@ nurseRouter.get("/nurseProfile", auth, getNurseProfile);
 nurseRouter.get("/addmissionRecords/:admissionId", getAdmissionRecordsById);
 nurseRouter.post("/addFollowUp", auth, addFollowUp);
 nurseRouter.get("/lastFollowUp", getLastFollowUpTime);
+nurseRouter.get("/followups/:admissionId", getFollowups);
 // nurseRouter.post("/signin", );
 
 // nurseRouter.get("/profile", auth, getUserProfile);

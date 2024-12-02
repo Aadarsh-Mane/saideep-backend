@@ -122,7 +122,40 @@ export const getLastFollowUpTime = async (req, res) => {
     });
   }
 };
+export const getFollowups = async (req, res) => {
+  try {
+    // Extract patientId and admissionId from the request parameters
+    const { admissionId } = req.params;
 
+    // Find the patient by admissionId
+    const patient = await patientSchema
+      .findOne({
+        "admissionRecords._id": admissionId,
+      })
+      .select("admissionRecords");
+
+    // Check if patient exists
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record using the admissionId
+    const admissionRecord = patient.admissionRecords.find(
+      (record) => record._id.toString() === admissionId
+    );
+
+    // If the admission record does not have follow-ups
+    if (!admissionRecord || !admissionRecord.followUps) {
+      return res.status(404).json({ message: "No follow-ups found" });
+    }
+
+    // Return the follow-ups for the specific admission
+    res.status(200).json(admissionRecord.followUps);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 export const getNurseProfile = async (req, res) => {
   const nurseId = req.userId; // Get nurseId from the request
 
