@@ -1,6 +1,7 @@
 import express from "express";
 import {
   admitPatient,
+  assignPatientToLab,
   getAssignedPatients,
   getDoctorProfile,
   getPatients,
@@ -13,6 +14,7 @@ doctorRouter.get("/getPatients", auth, getPatients);
 doctorRouter.get("/getDoctorProfile", auth, getDoctorProfile);
 doctorRouter.get("/getAssignedPatients", auth, getAssignedPatients);
 doctorRouter.post("/admitPatient/:patientId", auth, admitPatient);
+doctorRouter.post("/assignPatient", auth, assignPatientToLab);
 
 // userRouter.get("/profile", auth, getUserProfile);
 // userRouter.patch("/edit-profile", auth, upload.single("image"), editProfile);

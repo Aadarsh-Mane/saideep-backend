@@ -1,4 +1,5 @@
 import hospitalDoctors from "../models/hospitalDoctorSchema.js";
+import LabReport from "../models/labreportSchema.js";
 import patientSchema from "../models/patientSchema.js";
 
 export const getPatients = async (req, res) => {
@@ -202,5 +203,60 @@ export const getDoctorProfile = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Error fetching doctor profile", error: error.message });
+  }
+};
+export const assignPatientToLab = async (req, res) => {
+  const doctorId = req.userId;
+  try {
+    const { admissionId, patientId, labTestName } = req.body;
+
+    // Validate request fields
+    if (!admissionId || !patientId || !doctorId || !labTestName) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    // Check if the patient exists
+    const patient = await patientSchema.findById(patientId);
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Check if the admission record exists
+    const admissionRecord = patient.admissionRecords.id(admissionId);
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Optionally: Check for duplicate lab test assignment
+    const existingLabReport = await LabReport.findOne({
+      admissionId,
+      labTestName,
+    });
+    if (existingLabReport) {
+      return res
+        .status(400)
+        .json({ message: "Lab test already assigned for this admission" });
+    }
+
+    // Create a new lab report assignment
+    const labReport = new LabReport({
+      admissionId,
+      patientId,
+      doctorId,
+      labTestName,
+    });
+
+    await labReport.save();
+
+    res.status(200).json({
+      message: "Patient assigned to lab successfully",
+      labReport,
+    });
+  } catch (error) {
+    console.error("Error assigning patient to lab:", error);
+    res.status(500).json({
+      message: "Error assigning patient to lab",
+      error: error.message,
+    });
   }
 };

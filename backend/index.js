@@ -6,6 +6,7 @@ import doctorRouter from "./routes/doctor.js";
 import patientRouter from "./routes/patient.js";
 import nurseRouter from "./routes/nurse.js";
 import cors from "cors";
+import labRouter from "./routes/lab.js";
 const port = 3000;
 
 const app = express();
@@ -17,6 +18,7 @@ app.use("/patient", patientRouter);
 app.use("/reception", receiptionRouter);
 app.use("/doctors", doctorRouter);
 app.use("/nurse", nurseRouter);
+app.use("/labs", labRouter);
 app.get("/", (req, res) => {
   return res.status(200).json("Welcome to Ai in HealthCare");
 
