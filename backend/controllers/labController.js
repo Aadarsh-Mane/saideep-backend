@@ -48,7 +48,7 @@ export const generateReportPdfForPatient = async (req, res) => {
           .upload_stream(
             {
               folder: "lab_reports", // Cloudinary folder for lab reports
-              resource_type: "raw", // For handling non-image files like PDFs
+              resource_type: "auto", // For handling non-image files like PDFs
             },
             (error, result) => {
               if (error) {

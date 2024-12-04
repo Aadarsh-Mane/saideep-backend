@@ -208,10 +208,10 @@ export const getDoctorProfile = async (req, res) => {
 export const assignPatientToLab = async (req, res) => {
   const doctorId = req.userId;
   try {
-    const { admissionId, patientId, labTestName } = req.body;
+    const { admissionId, patientId, labTestNameGivenByDoctor } = req.body;
 
     // Validate request fields
-    if (!admissionId || !patientId || !doctorId || !labTestName) {
+    if (!admissionId || !patientId || !doctorId) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -230,7 +230,7 @@ export const assignPatientToLab = async (req, res) => {
     // Optionally: Check for duplicate lab test assignment
     const existingLabReport = await LabReport.findOne({
       admissionId,
-      labTestName,
+      labTestNameGivenByDoctor,
     });
     if (existingLabReport) {
       return res
@@ -243,7 +243,7 @@ export const assignPatientToLab = async (req, res) => {
       admissionId,
       patientId,
       doctorId,
-      labTestName,
+      labTestNameGivenByDoctor,
     });
 
     await labReport.save();
@@ -258,5 +258,38 @@ export const assignPatientToLab = async (req, res) => {
       message: "Error assigning patient to lab",
       error: error.message,
     });
+  }
+};
+
+export const getPatientsAssignedByDoctor = async (req, res) => {
+  const doctorId = req.userId; // Get the doctorId from the request's user (assuming you're using authentication)
+
+  try {
+    // Fetch lab reports where the doctorId matches the logged-in doctor
+    const labReports = await LabReport.find({ doctorId })
+      .populate({
+        path: "patientId",
+        select: "name age gender contact", // Select specific fields from the Patient schema
+      })
+      .populate({
+        path: "doctorId",
+        select: "doctorName email", // Select specific fields from the Doctor schema
+      });
+
+    if (!labReports || labReports.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No patients assigned by this doctor." });
+    }
+
+    res.status(200).json({
+      message: "Patients assigned by the doctor retrieved successfully",
+      labReports,
+    });
+  } catch (error) {
+    console.error("Error retrieving patients assigned by doctor:", error);
+    res
+      .status(500)
+      .json({ message: "Error retrieving patients", error: error.message });
   }
 };
