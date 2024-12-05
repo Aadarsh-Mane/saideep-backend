@@ -1,6 +1,8 @@
 import hospitalDoctors from "../models/hospitalDoctorSchema.js";
 import LabReport from "../models/labreportSchema.js";
+import PatientHistory from "../models/patientHistorySchema.js";
 import patientSchema from "../models/patientSchema.js";
+import mongoose from "mongoose";
 
 export const getPatients = async (req, res) => {
   console.log(req.usertype);
@@ -72,53 +74,6 @@ export const admitPatient = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error admitting patient", error: error.message });
-  }
-};
-export const dischargePatient = async (req, res) => {
-  const { patientId } = req.params;
-
-  try {
-    // Ensure the user is a doctor
-    if (req.usertype !== "doctor") {
-      return res.status(403).json({
-        message: "Access denied. Only doctors can discharge patients.",
-      });
-    }
-
-    // Retrieve the patient by ID
-    const patient = await patientSchema.findById(patientId);
-    if (!patient) {
-      return res.status(404).json({ message: "Patient not found" });
-    }
-
-    const doctor = await hospitalDoctors.findById(req.userId);
-    if (!doctor) {
-      return res.status(404).json({ message: "Doctor not found" });
-    }
-
-    // Check if the patient has any active admissions
-    const activeAdmission = patient.admissionRecords.find(
-      (record) => record.dischargeDate === null
-    );
-
-    if (!activeAdmission) {
-      return res.status(400).json({
-        message: `Patient ${patient.name} is not currently admitted.`,
-      });
-    }
-
-    // Update the last admission record with discharge date
-    activeAdmission.dischargeDate = new Date(); // Set the discharge date
-    await patient.save();
-
-    res.status(200).json({
-      message: `Patient ${patient.name} discharged by doctor ${doctor.doctorName}`,
-      patientDetails: patient,
-    });
-  } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error discharging patient", error: error.message });
   }
 };
 
@@ -291,5 +246,158 @@ export const getPatientsAssignedByDoctor = async (req, res) => {
     res
       .status(500)
       .json({ message: "Error retrieving patients", error: error.message });
+  }
+};
+
+export const dischargePatient = async (req, res) => {
+  const doctorId = req.userId;
+  const { patientId, admissionId } = req.body;
+  console.log(req.body);
+  if (!patientId || !admissionId || !doctorId) {
+    return res.status(400).json({ error: "Missing required parameters" });
+  }
+
+  try {
+    // Fetch the patient document
+    const patient = await patientSchema
+      .findOne({ patientId })
+      .populate("admissionRecords");
+    console.log(patient);
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+    console.log("Admission records:", patient.admissionRecords);
+
+    const admissionIndex = patient.admissionRecords.findIndex(
+      (admission) =>
+        admission._id.toString() === admissionId &&
+        admission.doctor.id.toString() === doctorId
+    );
+
+    if (admissionIndex === -1) {
+      console.log("Admission not found for:", {
+        patientId,
+        admissionId,
+        doctorId,
+      });
+      return res
+        .status(403)
+        .json({ error: "Unauthorized or admission not found" });
+    }
+    // Extract the admission record
+    const [admissionRecord] = patient.admissionRecords.splice(
+      admissionIndex,
+      1
+    );
+
+    // Mark patient as discharged
+    patient.discharged = true;
+
+    // Save the updated patient document
+    await patient.save();
+
+    // Fetch lab reports for this admission
+    const labReports = await LabReport.find({ admissionId }).exec();
+
+    // Add to PatientHistory
+    let patientHistory = await PatientHistory.findOne({ patientId });
+
+    if (!patientHistory) {
+      // Create a new history document if it doesn't exist
+      patientHistory = new PatientHistory({
+        patientId: patient.patientId,
+        name: patient.name,
+        gender: patient.gender,
+        contact: patient.contact,
+        history: [],
+      });
+    }
+
+    // Append the admission record to the history, including lab reports
+    patientHistory.history.push({
+      admissionId,
+      admissionDate: admissionRecord.admissionDate,
+      dischargeDate: new Date(),
+      reasonForAdmission: admissionRecord.reasonForAdmission,
+      symptoms: admissionRecord.symptoms,
+      initialDiagnosis: admissionRecord.initialDiagnosis,
+      doctor: admissionRecord.doctor,
+      reports: admissionRecord.reports,
+      followUps: admissionRecord.followUps,
+      labReports: labReports.map((report) => ({
+        labTestNameGivenByDoctor: report.labTestNameGivenByDoctor,
+        reports: report.reports,
+      })), // Add relevant lab report details
+    });
+
+    // Save the history document
+    await patientHistory.save();
+
+    // Notify the doctor about the discharge
+    notifyDoctor(doctorId, patientId, admissionRecord);
+
+    res.status(200).json({
+      message: "Patient discharged successfully",
+      updatedPatient: patient,
+      updatedHistory: patientHistory,
+    });
+  } catch (error) {
+    console.error("Error discharging patient:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Mock notification function
+const notifyDoctor = (doctorId, patientId, admissionRecord) => {
+  console.log(
+    `Doctor ${doctorId} notified: Patient ${patientId} discharged from admission on ${admissionRecord.admissionDate}`
+  );
+};
+export const getDischargedPatientsByDoctor = async (req, res) => {
+  const doctorId = req.userId;
+
+  try {
+    // Fetch patient history for the doctor, filtering by discharge date
+    const patientsHistory = await PatientHistory.aggregate([
+      {
+        $unwind: "$history", // Unwind the history array to get each admission record separately
+      },
+      {
+        $match: {
+          "history.doctor.id": new mongoose.Types.ObjectId(doctorId), // Match by doctor ID
+          "history.dischargeDate": { $ne: null }, // Only include records with a discharge date
+        },
+      },
+      {
+        $project: {
+          patientId: 1,
+          name: 1,
+          gender: 1,
+          contact: 1,
+          admissionId: "$history.admissionId",
+          admissionDate: "$history.admissionDate",
+          dischargeDate: "$history.dischargeDate",
+          reasonForAdmission: "$history.reasonForAdmission",
+          symptoms: "$history.symptoms",
+          initialDiagnosis: "$history.initialDiagnosis",
+          doctor: "$history.doctor",
+          reports: "$history.reports",
+          followUps: "$history.followUps",
+          labReports: "$history.labReports",
+        },
+      },
+    ]);
+
+    if (!patientsHistory.length) {
+      return res.status(404).json({ error: "No discharged patients found" });
+    }
+
+    res.status(200).json({
+      message: "Discharged patients retrieved successfully",
+      patientsHistory,
+    });
+  } catch (error) {
+    console.error("Error fetching discharged patients:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

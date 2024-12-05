@@ -17,10 +17,14 @@ const patientSchema1 = new mongoose.Schema({
   gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
   contact: { type: String, required: true },
   address: String,
+  discharged: { type: Boolean, default: false }, // New field to track discharge status
+
   admissionRecords: [
     {
       admissionDate: { type: Date, default: Date.now },
       reasonForAdmission: { type: String },
+      dischargeDate: { type: Date }, // Added discharge date
+
       symptoms: String,
       initialDiagnosis: String,
       doctor: {

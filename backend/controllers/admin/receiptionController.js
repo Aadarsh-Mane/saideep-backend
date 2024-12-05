@@ -1,8 +1,10 @@
 import Appointment from "../../models/bookAppointmentSchema.js";
 import hospitalDoctors from "../../models/hospitalDoctorSchema.js";
+import PatientHistory from "../../models/patientHistorySchema.js";
 import patientSchema from "../../models/patientSchema.js";
 import Doctor from "./../../models/doctorSchema.js";
 import dayjs from "dayjs";
+
 export const addPatient = async (req, res) => {
   const {
     name,
@@ -19,22 +21,57 @@ export const addPatient = async (req, res) => {
     let patient = await patientSchema.findOne({ name, contact });
 
     if (patient) {
-      const lastAdmission =
-        patient.admissionRecords[patient.admissionRecords.length - 1]
-          .admissionDate;
-      const daysSinceLastAdmission = dayjs().diff(dayjs(lastAdmission), "day");
+      let daysSinceLastAdmission = null;
 
-      // Add new admission record with condition details
+      // Check if the patient has been discharged
+      if (!patient.discharged) {
+        // If not discharged, calculate days since last admission
+        if (patient.admissionRecords.length > 0) {
+          const lastAdmission =
+            patient.admissionRecords[patient.admissionRecords.length - 1]
+              .admissionDate;
+          daysSinceLastAdmission = dayjs().diff(dayjs(lastAdmission), "day");
+        }
+      } else {
+        // Patient has been discharged, check history for the last discharge date
+        let patientHistory = await PatientHistory.findOne({
+          patientId: patient.patientId,
+        });
+
+        if (patientHistory) {
+          // Fetch the latest discharge date from the history
+          const lastDischarge = patientHistory.history
+            .filter((entry) => entry.dischargeDate)
+            .sort((a, b) =>
+              dayjs(b.dischargeDate).isBefore(a.dischargeDate) ? -1 : 1
+            )[0];
+
+          if (lastDischarge) {
+            // Calculate the days since last discharge
+            daysSinceLastAdmission = dayjs().diff(
+              dayjs(lastDischarge.dischargeDate),
+              "day"
+            );
+          }
+        }
+
+        // Set discharged status to false for re-admission
+        patient.discharged = false;
+      }
+
+      // Add new admission record
       patient.admissionRecords.push({
         admissionDate: new Date(),
         reasonForAdmission,
         symptoms,
         initialDiagnosis,
       });
+
+      // Save updated patient record
       await patient.save();
 
       return res.status(200).json({
-        message: `Patient ${name} readmitted successfully.`,
+        message: `Patient ${name} re-admitted successfully.`,
         patientDetails: patient,
         daysSinceLastAdmission,
         admissionRecords: patient.admissionRecords,

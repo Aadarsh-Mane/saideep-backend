@@ -2,7 +2,9 @@ import express from "express";
 import {
   admitPatient,
   assignPatientToLab,
+  dischargePatient,
   getAssignedPatients,
+  getDischargedPatientsByDoctor,
   getDoctorProfile,
   getPatients,
   getPatientsAssignedByDoctor,
@@ -16,6 +18,8 @@ doctorRouter.get("/getDoctorProfile", auth, getDoctorProfile);
 doctorRouter.get("/getAssignedPatients", auth, getAssignedPatients);
 doctorRouter.post("/admitPatient/:patientId", auth, admitPatient);
 doctorRouter.post("/assignPatient", auth, assignPatientToLab);
+doctorRouter.post("/dischargePatient", auth, dischargePatient);
+doctorRouter.get("/getdischargedPatient", auth, getDischargedPatientsByDoctor);
 doctorRouter.get(
   "/getDoctorAssignedPatient",
   auth,
