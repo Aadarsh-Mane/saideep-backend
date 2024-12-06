@@ -412,10 +412,10 @@ export const getPatientHistory = async (req, res) => {
         path: "history.doctor.id",
         select: "name", // Include doctor name from the Doctor model
       })
-      .populate({
-        path: "history.reports",
-        select: "reportUrl", // Include report URL from the PatientReport model
-      })
+      // .populate({
+      //   path: "history.reports",
+      //   select: "reportUrl", // Include report URL from the PatientReport model
+      // })
       .populate({
         path: "history.labReports.reports",
         select: "labTestName reportUrl labType", // Include necessary fields from the lab report
