@@ -20,6 +20,8 @@ app.use("/reception", receiptionRouter);
 app.use("/doctors", doctorRouter);
 app.use("/nurse", nurseRouter);
 app.use("/labs", labRouter);
+app.get("/patientHistory", getPatientHistory);
+
 app.get("/", (req, res) => {
   return res.status(200).json("Welcome to Ai in HealthCare");
 
