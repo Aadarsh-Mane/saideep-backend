@@ -401,3 +401,33 @@ export const getDischargedPatientsByDoctor = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
+export const getPatientHistory = async (req, res) => {
+  const { patientId } = req.params; // Get patientId from request parameters
+
+  try {
+    // Find the patient history by patientId
+    const patientHistory = await PatientHistory.findOne({ patientId })
+      .populate({
+        path: "history.doctor.id",
+        select: "name", // Include doctor name from the Doctor model
+      })
+      .populate({
+        path: "history.reports",
+        select: "reportUrl", // Include report URL from the PatientReport model
+      })
+      .populate({
+        path: "history.labReports.reports",
+        select: "labTestName reportUrl labType", // Include necessary fields from the lab report
+      });
+
+    if (!patientHistory) {
+      return res.status(404).json({ message: "Patient history not found" });
+    }
+
+    return res.status(200).json(patientHistory); // Return the full patient history
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};

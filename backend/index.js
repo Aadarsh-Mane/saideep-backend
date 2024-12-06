@@ -7,6 +7,7 @@ import patientRouter from "./routes/patient.js";
 import nurseRouter from "./routes/nurse.js";
 import cors from "cors";
 import labRouter from "./routes/lab.js";
+import { getPatientHistory } from "./controllers/doctorController.js";
 const port = 3000;
 
 const app = express();
