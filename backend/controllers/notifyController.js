@@ -74,3 +74,26 @@ export const assignDoctor = async (req, res) => {
       .json({ message: "Server error", error: error.message });
   }
 };
+
+export const getFcmToken = async (req, res) => {
+  try {
+    const { fcmToken } = req.body;
+    const userId = req.userId;
+
+    if (!fcmToken) {
+      return res.status(400).json({ message: "FCM token is required." });
+    }
+
+    const user = await hospitalDoctors.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    return res.status(200).json({ message: "FCM token stored successfully." });
+  } catch (error) {
+    console.error("Error storing FCM token:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
+  }
+};
