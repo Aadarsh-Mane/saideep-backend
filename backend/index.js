@@ -8,9 +8,16 @@ import nurseRouter from "./routes/nurse.js";
 import cors from "cors";
 import labRouter from "./routes/lab.js";
 import { getPatientHistory } from "./controllers/doctorController.js";
+import { getFcmToken } from "./controllers/notifyController.js";
+import { auth } from "./middleware/auth.js";
+import { Server } from "socket.io";
+import http from "http";
+import { socketHandler } from "./socketHandler.js";
 const port = 3000;
 
 const app = express();
+const server = http.createServer(app);
+
 app.use(express.json());
 app.use(cors());
 connectDB();
@@ -24,8 +31,6 @@ app.get("/patientHistory/:patientId", getPatientHistory);
 
 app.get("/", (req, res) => {
   return res.status(200).json("Welcome to Ai in HealthCare");
-
-  console.log("welcome to doctors service");
 });
 
 const predefinedLocation = {
@@ -47,6 +52,9 @@ app.post("/check-location", (req, res) => {
     res.json({ message: "You are not in the correct location." });
   }
 });
-app.listen(port, "0.0.0.0", () => {
+app.post("/storeFcmToken", auth, getFcmToken);
+socketHandler(server);
+
+server.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port http://localhost:${port}`);
 });

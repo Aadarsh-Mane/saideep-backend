@@ -1,7 +1,9 @@
+import { client } from "../../helpers/twilio.js";
 import Appointment from "../../models/bookAppointmentSchema.js";
 import hospitalDoctors from "../../models/hospitalDoctorSchema.js";
 import PatientHistory from "../../models/patientHistorySchema.js";
 import patientSchema from "../../models/patientSchema.js";
+import { sendNotification } from "../notifyController.js";
 import Doctor from "./../../models/doctorSchema.js";
 import dayjs from "dayjs";
 
@@ -98,6 +100,13 @@ export const addPatient = async (req, res) => {
       ],
     });
     await patient.save();
+    const messageBody = `Dear ${name}, welcome to our spandan hospital. Your patient ID is ${patientId}. Wishing you a speedy recovery!`;
+
+    await client.messages.create({
+      from: "+14152149378", // Twilio phone number
+      to: contact,
+      body: messageBody,
+    });
 
     res.status(200).json({
       message: `Patient ${name} added successfully with ID ${patientId}.`,
@@ -147,12 +156,6 @@ export const acceptAppointment = async (req, res) => {
 export const assignDoctor = async (req, res) => {
   try {
     const { patientId, doctorId, admissionId, isReadmission } = req.body;
-    console.log("Assigning doctor:", {
-      patientId,
-      doctorId,
-      admissionId,
-      isReadmission,
-    });
 
     // Find the patient
     const patient = await patientSchema.findOne({ patientId });
@@ -171,19 +174,20 @@ export const assignDoctor = async (req, res) => {
     if (!admissionRecord) {
       return res.status(404).json({ message: "Admission record not found" });
     }
-    console.log("Existing doctor in admission record:", admissionRecord.doctor);
-    // if (
-    //   admissionRecord.doctor &&
-    //   admissionRecord.doctor.id.toString() === doctorId
-    // ) {
-    //   return res.status(400).json({
-    //     message: "Doctor is already assigned to this specific admission.",
-    //   });
-    // }
 
-    // Assign doctor ID and name to the admission record
+    // Assign doctor to admission record
     admissionRecord.doctor = { id: doctorId, name: doctor.doctorName };
     await patient.save();
+
+    // Check if doctor has FCM token
+    if (doctor.fcmToken) {
+      // Send notification to the doctor
+      const title = "New Patient Assignment";
+      const body = `You have been assigned a new patient: ${patient.name}`;
+      await sendNotification(doctor.fcmToken, title, body);
+    } else {
+      console.warn("Doctor does not have an FCM token. Notification not sent.");
+    }
 
     return res
       .status(200)
@@ -200,10 +204,12 @@ export const assignDoctor = async (req, res) => {
 export const listDoctors = async (req, res) => {
   try {
     // Retrieve all doctors, with an option to filter by availability if required
-    const doctors = await hospitalDoctors.find({
-      usertype: "doctor",
-      // available: true,
-    });
+    const doctors = await hospitalDoctors
+      .find({
+        usertype: "doctor",
+        // available: true,
+      })
+      .select("-password -createdAt -fcmToken");
 
     if (!doctors || doctors.length === 0) {
       return res.status(404).json({ message: "No available doctors found." });
