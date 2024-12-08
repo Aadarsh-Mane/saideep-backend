@@ -1,54 +1,6 @@
 import mongoose from "mongoose";
 
 // 2-hour follow-up sub-schema
-const twoHourFollowUpSchema = new mongoose.Schema({
-  vitals: {
-    temperature: { type: Number }, // T (Temperature)
-    pulse: { type: Number }, // P (Pulse)
-    respirationRate: { type: Number }, // R (Respiration Rate)
-    bloodPressure: {
-      NIBP: { type: String }, // Non-Invasive Blood Pressure
-      IBP: { type: String }, // Invasive Blood Pressure
-    },
-    oxygenSaturation: { type: Number }, // SpO2
-    bloodSugarLevel: { type: Number }, // BSL
-    otherVitals: { type: String }, // OTHER
-  },
-  intake: {
-    ivFluid: { type: String }, // I.V. Fluid
-    nasogastric: { type: String }, // Nasogastric
-    rtFeedOral: { type: String }, // RT Feed/Oral
-    totalIntake: { type: String }, // Total
-    cvp: { type: String }, // CVP
-  },
-  output: {
-    urine: { type: String }, // Urine
-    stool: { type: String }, // Stool
-    rtAspirate: { type: String }, // RT Aspirate
-    otherOutput: { type: String }, // Other
-  },
-  ventilator: {
-    ventyMode: { type: String }, // VentyMode
-    setRate: { type: Number }, // Set Rate
-    fiO2: { type: Number }, // FiO2
-    pip: { type: Number }, // PIP
-    peepCpap: { type: String }, // PEEP/CPAP
-    ieRatio: { type: String }, // I:E Ratio
-    otherVentilator: { type: String }, // Other
-  },
-});
-
-// 4-hour follow-up sub-schema
-const fourHourFollowUpSchema = new mongoose.Schema({
-  date: { type: Date, default: Date.now }, // Date
-  pulse: { type: Number }, // Pulse
-  bloodPressure: { type: String }, // BP
-  oxygenSaturation: { type: Number }, // SpO2
-  temperature: { type: Number }, // Temp
-  bloodSugarLevel: { type: Number }, // BSL
-  intravenousFluids: { type: String }, // IV
-  urineOutput: { type: String }, // Urine
-});
 
 // Follow-up schema
 const followUpSchema = new mongoose.Schema({
@@ -57,11 +9,40 @@ const followUpSchema = new mongoose.Schema({
     ref: "Nurse",
     required: true,
   }, // Nurse who recorded the follow-up
-  date: { type: Date, default: Date.now },
   notes: { type: String, required: true },
   observations: { type: String },
-  twoHourFollowUp: twoHourFollowUpSchema,
-  fourHourFollowUp: fourHourFollowUpSchema,
+  temperature: { type: Number }, // T (Temperature)
+  pulse: { type: Number }, // P (Pulse)
+  respirationRate: { type: Number }, // R (Respiration Rate)
+  bloodPressure: {
+    NIBP: { type: String }, // Non-Invasive Blood Pressure
+    IBP: { type: String }, // Invasive Blood Pressure
+  },
+  oxygenSaturation: { type: Number }, // SpO2 (Oxygen Saturation)
+  bloodSugarLevel: { type: Number }, // BSL (Blood Sugar Level)
+  otherVitals: { type: String }, // OTHER (Any other vitals to be recorded)
+
+  // Intake data (IV Fluids, Nasogastric, Feed, etc.)
+  ivFluid: { type: String }, // I.V. Fluid (Intravenous fluids administered)
+  nasogastric: { type: String }, // Nasogastric (Input through nasogastric tube)
+  rtFeedOral: { type: String }, // RT Feed/Oral (Feed given via RT or orally)
+  totalIntake: { type: String }, // Total (Total intake of fluids)
+  cvp: { type: String }, // CVP (Central Venous Pressure)
+
+  // Output data (Urine, Stool, RT Aspirate, etc.)
+  urine: { type: String }, // Urine (Urinary output)
+  stool: { type: String }, // Stool (Stool output)
+  rtAspirate: { type: String }, // RT Aspirate (Output through Ryle's Tube aspirate)
+  otherOutput: { type: String }, // Other (Any other output)
+
+  // Ventilator data (Mode, Rate, FiO2, etc.)
+  ventyMode: { type: String }, // VentyMode (Ventilator Mode)
+  setRate: { type: Number }, // Set Rate (Set ventilator rate)
+  fiO2: { type: Number }, // FiO2 (Fraction of Inspired Oxygen)
+  pip: { type: Number }, // PIP (Peak Inspiratory Pressure)
+  peepCpap: { type: String }, // PEEP/CPAP (Positive End-Expiratory Pressure/Continuous Positive Airway Pressure)
+  ieRatio: { type: String }, // I:E Ratio (Inspiratory to Expiratory Ratio)
+  otherVentilator: { type: String }, // Other (Any
 });
 
 // Patient schema

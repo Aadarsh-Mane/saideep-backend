@@ -1,9 +1,4 @@
-import puppeteer from "puppeteer";
-import fs from "fs";
 
-async function createBillPDF() {
-  // Define the HTML content
-  const htmlContent = `
   <!DOCTYPE html>
   <html lang="en">
   <head>
@@ -90,23 +85,4 @@ async function createBillPDF() {
       </div>
   </body>
   </html>
-  `;
-
-  // Save HTML to a file (optional for debugging)
-  fs.writeFileSync("bill.html", htmlContent);
-
-  // Launch Puppeteer and generate the PDF
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-  await page.setContent(htmlContent, { waitUntil: "load" });
-  await page.pdf({
-    path: "bill.pdf",
-    format: "A4",
-    printBackground: true,
-  });
-  await browser.close();
-
-  console.log("PDF Generated Successfully!");
-}
-
-createBillPDF();
+  

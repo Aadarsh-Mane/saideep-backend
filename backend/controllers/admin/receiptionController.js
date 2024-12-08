@@ -4,7 +4,6 @@ import hospitalDoctors from "../../models/hospitalDoctorSchema.js";
 import PatientHistory from "../../models/patientHistorySchema.js";
 import patientSchema from "../../models/patientSchema.js";
 import { sendNotification } from "../notifyController.js";
-import Doctor from "./../../models/doctorSchema.js";
 import dayjs from "dayjs";
 
 export const addPatient = async (req, res) => {
@@ -100,13 +99,13 @@ export const addPatient = async (req, res) => {
       ],
     });
     await patient.save();
-    const messageBody = `Dear ${name}, welcome to our spandan hospital. Your patient ID is ${patientId}. Wishing you a speedy recovery!`;
+    // const messageBody = `Dear ${name}, welcome to our spandan hospital. Your patient ID is ${patientId}. Wishing you a speedy recovery!`;
 
-    await client.messages.create({
-      from: "+14152149378", // Twilio phone number
-      to: contact,
-      body: messageBody,
-    });
+    // await client.messages.create({
+    //   from: "+14152149378", // Twilio phone number
+    //   to: contact,
+    //   body: messageBody,
+    // });
 
     res.status(200).json({
       message: `Patient ${name} added successfully with ID ${patientId}.`,

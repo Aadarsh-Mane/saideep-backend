@@ -3,7 +3,35 @@ import patientSchema from "../models/patientSchema.js";
 
 export const addFollowUp = async (req, res) => {
   try {
-    const { patientId, admissionId, notes, observations } = req.body;
+    const {
+      patientId,
+      admissionId,
+      notes,
+      observations,
+      temperature,
+      pulse,
+      respirationRate,
+      bloodPressure,
+      oxygenSaturation,
+      bloodSugarLevel,
+      otherVitals,
+      ivFluid,
+      nasogastric,
+      rtFeedOral,
+      totalIntake,
+      cvp,
+      urine,
+      stool,
+      rtAspirate,
+      otherOutput,
+      ventyMode,
+      setRate,
+      fiO2,
+      pip,
+      peepCpap,
+      ieRatio,
+      otherVentilator,
+    } = req.body;
     const nurseId = req.userId; // Nurse ID from authenticated user
 
     // Validate user type to ensure only nurses can add follow-ups
@@ -41,6 +69,29 @@ export const addFollowUp = async (req, res) => {
       nurseId: nurseId,
       notes: notes,
       observations: observations,
+      temperature,
+      pulse,
+      respirationRate,
+      bloodPressure,
+      oxygenSaturation,
+      bloodSugarLevel,
+      otherVitals,
+      ivFluid,
+      nasogastric,
+      rtFeedOral,
+      totalIntake,
+      cvp,
+      urine,
+      stool,
+      rtAspirate,
+      otherOutput,
+      ventyMode,
+      setRate,
+      fiO2,
+      pip,
+      peepCpap,
+      ieRatio,
+      otherVentilator,
       date: dateInIST, // Sets the date to now
     });
 
