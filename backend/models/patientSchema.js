@@ -9,15 +9,14 @@ const followUpSchema = new mongoose.Schema({
     ref: "Nurse",
     required: true,
   }, // Nurse who recorded the follow-up
+  date: { type: String },
+
   notes: { type: String, required: true },
   observations: { type: String },
   temperature: { type: Number }, // T (Temperature)
   pulse: { type: Number }, // P (Pulse)
   respirationRate: { type: Number }, // R (Respiration Rate)
-  bloodPressure: {
-    NIBP: { type: String }, // Non-Invasive Blood Pressure
-    IBP: { type: String }, // Invasive Blood Pressure
-  },
+  bloodPressure: { type: String }, // Non-Invasive Blood Pressure
   oxygenSaturation: { type: Number }, // SpO2 (Oxygen Saturation)
   bloodSugarLevel: { type: Number }, // BSL (Blood Sugar Level)
   otherVitals: { type: String }, // OTHER (Any other vitals to be recorded)
@@ -43,6 +42,15 @@ const followUpSchema = new mongoose.Schema({
   peepCpap: { type: String }, // PEEP/CPAP (Positive End-Expiratory Pressure/Continuous Positive Airway Pressure)
   ieRatio: { type: String }, // I:E Ratio (Inspiratory to Expiratory Ratio)
   otherVentilator: { type: String }, // Other (Any
+
+  fourhrpulse: { type: String },
+  fourhrbloodPressure: { type: String },
+  fourhroxygenSaturation: { type: String },
+  fourhrTemperature: { type: String },
+  fourhrbloodSugarLevel: { type: String },
+  fourhrotherVitals: { type: String },
+  fourhrivFluid: { type: String },
+  fourhrurine: { type: String },
 });
 
 // Patient schema

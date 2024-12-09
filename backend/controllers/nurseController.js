@@ -31,6 +31,14 @@ export const addFollowUp = async (req, res) => {
       peepCpap,
       ieRatio,
       otherVentilator,
+      fourhrpulse,
+      fourhrbloodPressure,
+      fourhroxygenSaturation,
+      fourhrTemperature,
+      fourhrbloodSugarLevel,
+      fourhrotherVitals,
+      fourhrurine,
+      fourhrivFluid,
     } = req.body;
     const nurseId = req.userId; // Nurse ID from authenticated user
 
@@ -92,6 +100,14 @@ export const addFollowUp = async (req, res) => {
       peepCpap,
       ieRatio,
       otherVentilator,
+      fourhrpulse,
+      fourhrbloodPressure,
+      fourhroxygenSaturation,
+      fourhrTemperature,
+      fourhrbloodSugarLevel,
+      fourhrotherVitals,
+      fourhrurine,
+      fourhrivFluid,
       date: dateInIST, // Sets the date to now
     });
 
