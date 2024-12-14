@@ -445,6 +445,28 @@ export const dischargePatient = async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+export const getAllDoctorsProfiles = async (req, res) => {
+  try {
+    // Find all doctors' profiles
+    const doctorsProfiles = await hospitalDoctors.find().select("-password"); // Exclude passwords for security
+
+    // Check if doctors' profiles exist
+    if (!doctorsProfiles || doctorsProfiles.length === 0) {
+      return res.status(404).json({ message: "No doctors found" });
+    }
+
+    // Return doctors' profiles
+    return res.status(200).json({ doctorsProfiles });
+  } catch (error) {
+    console.error("Error fetching doctors' profiles:", error);
+    return res
+      .status(500)
+      .json({
+        message: "Error fetching doctors' profiles",
+        error: error.message,
+      });
+  }
+};
 
 // Mock notification function
 const notifyDoctor = (doctorId, patientId, admissionRecord) => {
