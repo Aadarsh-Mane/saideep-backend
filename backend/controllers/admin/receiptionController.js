@@ -13,6 +13,8 @@ export const addPatient = async (req, res) => {
     gender,
     contact,
     address,
+    weight,
+    caste,
     reasonForAdmission,
     symptoms,
     initialDiagnosis,
@@ -89,6 +91,8 @@ export const addPatient = async (req, res) => {
       gender,
       contact,
       address,
+      weight,
+      caste,
       admissionRecords: [
         {
           admissionDate: new Date(),

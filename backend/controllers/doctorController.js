@@ -215,6 +215,105 @@ export const assignPatientToLab = async (req, res) => {
     });
   }
 };
+export const admitPatientByDoctor = async (req, res) => {
+  try {
+    const { admissionId } = req.body; // Get admission ID from request parameters
+    const doctorId = req.userId; // Get doctor ID from authenticated user
+    console.log("doctor", doctorId);
+    // Validate admission ID
+    if (!admissionId) {
+      return res.status(400).json({ message: "Admission ID is required" });
+    }
+    // Find the patient and relevant admission record
+    const patient = await patientSchema.findOne({
+      "admissionRecords._id": admissionId,
+    });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record
+    const admissionRecord = patient.admissionRecords.find(
+      (record) => record._id.toString() === admissionId
+    );
+    console.log(admissionRecord.doctor.id.toString());
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+    if (admissionRecord.doctor.id.toString() !== doctorId) {
+      return res.status(403).json({
+        message: "You are not authorized to admit this patient",
+      });
+    }
+    if (admissionRecord.status === "admitted") {
+      return res.status(400).json({
+        message: "This patient has already been admitted for this admission ID",
+      });
+    }
+
+    // Update the admission record with the doctor details
+    // admissionRecord.doctor = { id: doctorId }; // Update doctor ID
+    admissionRecord.status = "admitted"; // Optional: Update the status
+
+    // Save the updated patient document
+    await patient.save();
+
+    res.status(200).json({
+      message: "Patient successfully admitted",
+      patient: {
+        id: patient._id,
+        name: patient.name,
+        admissionRecord,
+      },
+    });
+  } catch (error) {
+    console.error("Error admitting patient:", error);
+    res.status(500).json({
+      message: "Error admitting patient",
+      error: error.message,
+    });
+  }
+};
+export const getAdmittedPatientsByDoctor = async (req, res) => {
+  try {
+    const doctorId = req.userId; // Get doctor ID from authenticated user
+
+    // Find all patients with admission records associated with this doctor
+    const patients = await patientSchema.find({
+      "admissionRecords.doctor.id": doctorId,
+      "admissionRecords.status": "admitted", // Only admitted patients
+    });
+
+    if (patients.length === 0) {
+      return res.status(404).json({
+        message: "No admitted patients found for this doctor",
+      });
+    }
+
+    // Filter admission records specifically for this doctor
+    const filteredPatients = patients.map((patient) => {
+      const relevantAdmissions = patient.admissionRecords.filter(
+        (record) =>
+          record.doctor &&
+          record.doctor.id.toString() === doctorId &&
+          record.status === "admitted"
+      );
+      return { ...patient.toObject(), admissionRecords: relevantAdmissions };
+    });
+
+    res.status(200).json({
+      message: "Admitted patients retrieved successfully",
+      patients: filteredPatients,
+    });
+  } catch (error) {
+    console.error("Error retrieving admitted patients:", error);
+    res.status(500).json({
+      message: "Error retrieving admitted patients",
+      error: error.message,
+    });
+  }
+};
 
 export const getPatientsAssignedByDoctor = async (req, res) => {
   const doctorId = req.userId; // Get the doctorId from the request's user (assuming you're using authentication)
@@ -354,7 +453,7 @@ const notifyDoctor = (doctorId, patientId, admissionRecord) => {
   );
 };
 export const getDischargedPatientsByDoctor = async (req, res) => {
-  const doctorId = req.userId;
+  // const doctorId = req.userId;
 
   try {
     // Fetch patient history for the doctor, filtering by discharge date
@@ -364,7 +463,7 @@ export const getDischargedPatientsByDoctor = async (req, res) => {
       },
       {
         $match: {
-          "history.doctor.id": new mongoose.Types.ObjectId(doctorId), // Match by doctor ID
+          // "history.doctor.id": new mongoose.Types.ObjectId(doctorId), // Match by doctor ID
           "history.dischargeDate": { $ne: null }, // Only include records with a discharge date
         },
       },

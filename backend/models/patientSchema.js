@@ -65,6 +65,7 @@ const patientSchema1 = new mongoose.Schema({
   admissionRecords: [
     {
       admissionDate: { type: Date, default: Date.now },
+      status: { type: String, default: "Pending" },
       reasonForAdmission: { type: String },
       dischargeDate: { type: Date }, // Discharge date
       symptoms: { type: String },
