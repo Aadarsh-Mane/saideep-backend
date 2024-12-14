@@ -5,6 +5,7 @@ import {
   assignPatientToLab,
   dischargePatient,
   getAdmittedPatientsByDoctor,
+  getAllDoctorsProfiles,
   getAssignedPatients,
   getDischargedPatientsByDoctor,
   getDoctorProfile,
@@ -17,6 +18,7 @@ const doctorRouter = express.Router();
 
 doctorRouter.get("/getPatients", auth, getPatients);
 doctorRouter.get("/getDoctorProfile", auth, getDoctorProfile);
+doctorRouter.get("/getAllDoctorProfile", getAllDoctorsProfiles);
 doctorRouter.post("/admitPatient", auth, admitPatientByDoctor);
 doctorRouter.get("/getadmittedPatient", auth, getAdmittedPatientsByDoctor);
 doctorRouter.get("/getAssignedPatients", auth, getAssignedPatients);
