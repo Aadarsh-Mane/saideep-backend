@@ -1,5 +1,11 @@
+import { fileURLToPath } from "url"; // To handle __dirname in ESM
+import { google } from "googleapis";
+import fs from "fs";
+import path from "path";
 import cloudinary from "../helpers/cloudinary.js";
 import LabReport from "../models/labreportSchema.js";
+import { Readable } from "stream";
+
 export const getPatientsAssignedToLab = async (req, res) => {
   try {
     // Fetch all lab reports and populate patient and doctor details
@@ -32,52 +38,60 @@ export const getPatientsAssignedToLab = async (req, res) => {
 };
 
 export const generateReportPdfForPatient = async (req, res) => {
+  // Setup __dirname for ESM
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = path.dirname(__filename);
   try {
-    const { admissionId, patientId, labTestName, labType } = req.body; // Accept new fields
+    const { admissionId, patientId, labTestName, labType } = req.body;
     const file = req.file; // Get the uploaded PDF file
 
     if (!admissionId || !patientId || !labTestName || !labType || !file) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Upload the PDF file to Cloudinary
-    let reportUrl = "";
-    if (file) {
-      const uploadResult = await new Promise((resolve, reject) => {
-        cloudinary.v2.uploader
-          .upload_stream(
-            {
-              folder: "lab_reports", // Cloudinary folder for lab reports
-              resource_type: "auto", // For handling non-image files like PDFs
-            },
-            (error, result) => {
-              if (error) {
-                reject(new Error(error.message));
-              } else {
-                resolve(result);
-              }
-            }
-          )
-          .end(file.buffer); // Pass the buffer to Cloudinary
-      });
+    console.log("Uploaded file details:", file);
 
-      reportUrl = uploadResult.secure_url; // Save the URL of the uploaded PDF
-    }
+    // Authenticate with Google Drive
+    const auth = new google.auth.GoogleAuth({
+      keyFile: "./apikey.json", // Path to your Google service account key file
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
 
-    // Find the lab report document by admissionId and patientId
+    // Convert buffer to a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(file.buffer);
+    bufferStream.push(null);
+
+    // Upload file to Google Drive
+    const fileMetadata = {
+      name: file.originalname, // Use the original file name
+      parents: ["1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV"], // Replace with your shared folder ID
+    };
+    const media = {
+      mimeType: file.mimetype,
+      body: bufferStream, // Stream the buffer directly
+    };
+
+    const uploadResponse = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: "id, webViewLink",
+    });
+
+    const reportUrl = uploadResponse.data.webViewLink; // Link to the uploaded file
+
+    // Save report to MongoDB
     let labReport = await LabReport.findOne({ admissionId, patientId });
 
     if (!labReport) {
-      // If no lab report document exists for the admissionId, create one
       labReport = new LabReport({
         admissionId,
         patientId,
-        // doctorId,
         reports: [],
       });
     }
 
-    // Add a new report to the reports array
     labReport.reports.push({
       labTestName,
       reportUrl,
@@ -85,7 +99,6 @@ export const generateReportPdfForPatient = async (req, res) => {
       uploadedAt: new Date(),
     });
 
-    // Save the updated lab report document
     await labReport.save();
 
     res.status(200).json({
