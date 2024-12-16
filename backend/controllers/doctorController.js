@@ -459,12 +459,10 @@ export const getAllDoctorsProfiles = async (req, res) => {
     return res.status(200).json({ doctorsProfiles });
   } catch (error) {
     console.error("Error fetching doctors' profiles:", error);
-    return res
-      .status(500)
-      .json({
-        message: "Error fetching doctors' profiles",
-        error: error.message,
-      });
+    return res.status(500).json({
+      message: "Error fetching doctors' profiles",
+      error: error.message,
+    });
   }
 };
 
@@ -550,5 +548,40 @@ export const getPatientHistory = async (req, res) => {
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+export const addPrescription = async (req, res) => {
+  const { patientId, admissionId, prescription } = req.body;
+
+  try {
+    // Validate request body
+    if (!patientId || !admissionId || !prescription) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // Find the patient by patientId
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+
+    // Find the admission record by its implicit `_id` (admissionId)
+    const admissionRecord = patient.admissionRecords.id(admissionId);
+    if (!admissionRecord) {
+      return res.status(404).json({ error: "Admission record not found" });
+    }
+
+    // Add the new prescription to the `doctorPrescrption` field
+    admissionRecord.doctorPrescrption.push(prescription);
+
+    // Save the updated patient document
+    await patient.save();
+
+    return res
+      .status(200)
+      .json({ message: "Prescription added successfully", patient });
+  } catch (error) {
+    console.error("Error adding prescription:", error);
+    return res.status(500).json({ error: "Server error" });
   }
 };
