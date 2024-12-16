@@ -585,3 +585,37 @@ export const addPrescription = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
+export const fetchPrescriptions = async (req, res) => {
+  const { admissionId } = req.params;
+
+  if (!admissionId) {
+    return res.status(400).json({ error: "Admission ID is required" });
+  }
+
+  try {
+    const patient = await patientSchema.findOne({
+      "admissionRecords._id": admissionId,
+    });
+
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+
+    // Find the admission record with the specified ID
+    const admissionRecord = patient.admissionRecords.find(
+      (record) => record._id.toString() === admissionId
+    );
+
+    if (!admissionRecord || !admissionRecord.doctorPrescrption) {
+      return res
+        .status(404)
+        .json({ error: "No prescriptions found for this admission" });
+    }
+
+    // Return the prescriptions associated with the admission
+    res.status(200).json(admissionRecord.doctorPrescrption);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch prescriptions" });
+  }
+};
