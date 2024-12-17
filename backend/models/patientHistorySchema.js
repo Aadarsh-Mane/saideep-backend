@@ -14,6 +14,8 @@ const patientHistorySchema = new mongoose.Schema({
       admissionDate: Date,
       dischargeDate: Date, // When the patient was discharged
       reasonForAdmission: String,
+      doctorPrescrption: { type: [String] },
+
       symptoms: String,
       initialDiagnosis: String,
       doctor: {

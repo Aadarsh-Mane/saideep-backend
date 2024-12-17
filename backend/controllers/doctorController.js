@@ -351,7 +351,7 @@ export const getPatientsAssignedByDoctor = async (req, res) => {
 export const dischargePatient = async (req, res) => {
   const doctorId = req.userId;
   const { patientId, admissionId } = req.body;
-  console.log(req.body);
+  console.log("here is the deital", req.body);
   if (!patientId || !admissionId || !doctorId) {
     return res.status(400).json({ error: "Missing required parameters" });
   }
