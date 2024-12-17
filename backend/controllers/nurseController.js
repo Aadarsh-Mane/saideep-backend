@@ -69,7 +69,7 @@ export const addFollowUp = async (req, res) => {
 
     const dateInIST = new Date().toLocaleString("en-IN", {
       timeZone: "Asia/Kolkata",
-      hour12: false,
+      hour12: true,
     });
 
     // Add follow-up to the admission record
