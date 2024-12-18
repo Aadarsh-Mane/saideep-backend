@@ -3,6 +3,10 @@ import LabReport from "../models/labreportSchema.js";
 import PatientHistory from "../models/patientHistorySchema.js";
 import patientSchema from "../models/patientSchema.js";
 import mongoose from "mongoose";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import puppeteer from "puppeteer";
+import path from "path";
 
 export const getPatients = async (req, res) => {
   console.log(req.usertype);
@@ -411,7 +415,11 @@ export const dischargePatient = async (req, res) => {
         history: [],
       });
     }
-
+    // Loop through each follow-up and ensure all details are included
+    const followUps = admissionRecord.followUps.map((followUp) => ({
+      ...followUp.toObject(), // Spread the follow-up data
+      // Include additional or computed values if necessary (e.g., final observations)
+    }));
     // Append the admission record to the history, including lab reports
     patientHistory.history.push({
       admissionId,
@@ -422,7 +430,7 @@ export const dischargePatient = async (req, res) => {
       initialDiagnosis: admissionRecord.initialDiagnosis,
       doctor: admissionRecord.doctor,
       reports: admissionRecord.reports,
-      followUps: admissionRecord.followUps,
+      followUps: followUps,
       labReports: labReports.map((report) => ({
         labTestNameGivenByDoctor: report.labTestNameGivenByDoctor,
         reports: report.reports,
@@ -521,35 +529,36 @@ export const getDischargedPatientsByDoctor = async (req, res) => {
   }
 };
 
+// Function to generate PDF from HTML
 export const getPatientHistory = async (req, res) => {
-  const { patientId } = req.params; // Get patientId from request parameters
+  // Create __dirname in ES modules
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const { patientId } = req.params;
 
   try {
-    // Find the patient history by patientId
+    // Fetch patient history
     const patientHistory = await PatientHistory.findOne({ patientId })
       .populate({
         path: "history.doctor.id",
-        select: "name", // Include doctor name from the Doctor model
+        select: "name",
       })
-      // .populate({
-      //   path: "history.reports",
-      //   select: "reportUrl", // Include report URL from the PatientReport model
-      // })
       .populate({
         path: "history.labReports.reports",
-        select: "labTestName reportUrl labType", // Include necessary fields from the lab report
+        select: "labTestName reportUrl labType",
       });
 
     if (!patientHistory) {
       return res.status(404).json({ message: "Patient history not found" });
     }
 
-    return res.status(200).json(patientHistory); // Return the full patient history
+    return res.status(200).json(patientHistory);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
   }
 };
+
 export const addPrescription = async (req, res) => {
   const { patientId, admissionId, prescription } = req.body;
 
