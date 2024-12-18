@@ -3,6 +3,10 @@ import LabReport from "../models/labreportSchema.js";
 import PatientHistory from "../models/patientHistorySchema.js";
 import patientSchema from "../models/patientSchema.js";
 import mongoose from "mongoose";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import puppeteer from "puppeteer";
+import path from "path";
 
 export const getPatients = async (req, res) => {
   console.log(req.usertype);
@@ -411,7 +415,11 @@ export const dischargePatient = async (req, res) => {
         history: [],
       });
     }
-
+    // Loop through each follow-up and ensure all details are included
+    const followUps = admissionRecord.followUps.map((followUp) => ({
+      ...followUp.toObject(), // Spread the follow-up data
+      // Include additional or computed values if necessary (e.g., final observations)
+    }));
     // Append the admission record to the history, including lab reports
     patientHistory.history.push({
       admissionId,
@@ -422,7 +430,7 @@ export const dischargePatient = async (req, res) => {
       initialDiagnosis: admissionRecord.initialDiagnosis,
       doctor: admissionRecord.doctor,
       reports: admissionRecord.reports,
-      followUps: admissionRecord.followUps,
+      followUps: followUps,
       labReports: labReports.map((report) => ({
         labTestNameGivenByDoctor: report.labTestNameGivenByDoctor,
         reports: report.reports,
@@ -521,35 +529,151 @@ export const getDischargedPatientsByDoctor = async (req, res) => {
   }
 };
 
+// Function to generate PDF from HTML
 export const getPatientHistory = async (req, res) => {
-  const { patientId } = req.params; // Get patientId from request parameters
+  // Create __dirname in ES modules
+  const __filename = fileURLToPath(import.meta.url);
+  const __dirname = dirname(__filename);
+  const { patientId } = req.params;
 
   try {
-    // Find the patient history by patientId
+    // Fetch patient history
     const patientHistory = await PatientHistory.findOne({ patientId })
       .populate({
         path: "history.doctor.id",
-        select: "name", // Include doctor name from the Doctor model
+        select: "name",
       })
-      // .populate({
-      //   path: "history.reports",
-      //   select: "reportUrl", // Include report URL from the PatientReport model
-      // })
       .populate({
         path: "history.labReports.reports",
-        select: "labTestName reportUrl labType", // Include necessary fields from the lab report
+        select: "labTestName reportUrl labType",
       });
 
     if (!patientHistory) {
       return res.status(404).json({ message: "Patient history not found" });
     }
 
-    return res.status(200).json(patientHistory); // Return the full patient history
+    // Create HTML content
+    const htmlContent = `
+      <html>
+      <head>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .section { margin-bottom: 20px; }
+          .history { border: 1px solid #ddd; padding: 10px; margin-bottom: 10px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          table th, table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Patient History</h1>
+          <p><strong>Patient ID:</strong> ${patientHistory.patientId}</p>
+          <p><strong>Name:</strong> ${patientHistory.name}</p>
+          <p><strong>Gender:</strong> ${patientHistory.gender}</p>
+          <p><strong>Contact:</strong> ${patientHistory.contact}</p>
+        </div>
+        <div class="section">
+          <h2>History</h2>
+          ${patientHistory.history
+            .map(
+              (history) => `
+            <div class="history">
+              <p><strong>Doctor:</strong> ${history.doctor.name}</p>
+              <p><strong>Admission Date:</strong> ${new Date(
+                history.admissionDate
+              ).toLocaleString()}</p>
+              <p><strong>Discharge Date:</strong> ${new Date(
+                history.dischargeDate
+              ).toLocaleString()}</p>
+              <p><strong>Reason for Admission:</strong> ${
+                history.reasonForAdmission
+              }</p>
+              <p><strong>Symptoms:</strong> ${history.symptoms}</p>
+              <p><strong>Initial Diagnosis:</strong> ${
+                history.initialDiagnosis
+              }</p>
+              <h3>Follow-Ups</h3>
+              <table>
+                <tr>
+                  <th>Date</th>
+                  <th>Notes</th>
+                  <th>Observations</th>
+                  <th>Vitals</th>
+                </tr>
+                ${history.followUps
+                  .map(
+                    (followUp) => `
+                  <tr>
+                    <td>${followUp.date}</td>
+                    <td>${followUp.notes}</td>
+                    <td>${followUp.observations}</td>
+                    <td>
+                      Temperature: ${followUp.temperature}, 
+                      Pulse: ${followUp.pulse}, 
+                      BP: ${followUp.bloodPressure}
+                    </td>
+                  </tr>
+                `
+                  )
+                  .join("")}
+              </table>
+              <h3>Lab Reports</h3>
+              <ul>
+                ${history.labReports
+                  .map(
+                    (lab) => `
+                  <li>
+                    <strong>${lab.labTestNameGivenByDoctor}</strong>
+                    <ul>
+                      ${lab.reports
+                        .map(
+                          (report) => `
+                        <li>${report.labTestName} - <a href="${report.reportUrl}">View Report</a></li>
+                      `
+                        )
+                        .join("")}
+                    </ul>
+                  </li>
+                `
+                  )
+                  .join("")}
+              </ul>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Generate PDF using Puppeteer
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(htmlContent);
+
+    // Specify the absolute path for the PDF
+    const pdfPath = path.resolve(__dirname, `${patientId}_history.pdf`);
+
+    await page.pdf({ path: pdfPath, format: "A4" });
+    await browser.close();
+
+    console.log("PDF generated successfully!");
+
+    // Send the PDF as a response
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${patientId}_history.pdf`
+    );
+    res.sendFile(pdfPath);
   } catch (error) {
     console.error(error);
     return res.status(500).json({ message: "Server error" });
   }
 };
+
 export const addPrescription = async (req, res) => {
   const { patientId, admissionId, prescription } = req.body;
 
