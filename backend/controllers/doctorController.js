@@ -551,7 +551,6 @@ export const getPatientHistory = async (req, res) => {
     if (!patientHistory) {
       return res.status(404).json({ message: "Patient history not found" });
     }
-
     return res.status(200).json(patientHistory);
   } catch (error) {
     console.error(error);
