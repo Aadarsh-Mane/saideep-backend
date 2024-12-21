@@ -12,11 +12,15 @@ export const getPatientsAssignedToLab = async (req, res) => {
     const labReports = await LabReport.find()
       .populate({
         path: "patientId",
-        select: "name age gender contact", // Select specific fields from the Patient schema
+        select: "name age gender contact admissionRecords", // Only include the necessary fields
+        match: {
+          // Only include patients with non-empty admissionRecords array
+          admissionRecords: { $not: { $size: 0 } },
+        },
       })
       .populate({
         path: "doctorId",
-        select: "doctorName email", // Select specific fields from the Doctor schema
+        select: "doctorName email",
       });
 
     if (!labReports || labReports.length === 0) {
@@ -24,6 +28,13 @@ export const getPatientsAssignedToLab = async (req, res) => {
         .status(404)
         .json({ message: "No patients assigned to the lab." });
     }
+
+    // Exclude followUps from the populated patient data
+    labReports.forEach((report) => {
+      report.patientId.admissionRecords.forEach((record) => {
+        delete record.followUps; // Remove the followUps field from each admission record
+      });
+    });
 
     res.status(200).json({
       message: "Patients assigned to the lab retrieved successfully",

@@ -558,7 +558,7 @@ export const getPatientHistory = async (req, res) => {
   }
 };
 
-export const addPrescription = async (req, res) => {
+export const addConsultant = async (req, res) => {
   const { patientId, admissionId, prescription } = req.body;
 
   try {
@@ -579,8 +579,8 @@ export const addPrescription = async (req, res) => {
       return res.status(404).json({ error: "Admission record not found" });
     }
 
-    // Add the new prescription to the `doctorPrescrption` field
-    admissionRecord.doctorPrescrption.push(prescription);
+    // Add the new prescription to the `doctorConsultant` field
+    admissionRecord.doctorConsultant.push(prescription);
 
     // Save the updated patient document
     await patient.save();
@@ -593,7 +593,7 @@ export const addPrescription = async (req, res) => {
     return res.status(500).json({ error: "Server error" });
   }
 };
-export const fetchPrescriptions = async (req, res) => {
+export const fetchConsultant = async (req, res) => {
   const { admissionId } = req.params;
 
   if (!admissionId) {
@@ -614,14 +614,14 @@ export const fetchPrescriptions = async (req, res) => {
       (record) => record._id.toString() === admissionId
     );
 
-    if (!admissionRecord || !admissionRecord.doctorPrescrption) {
+    if (!admissionRecord || !admissionRecord.doctorConsultant) {
       return res
         .status(404)
         .json({ error: "No prescriptions found for this admission" });
     }
 
     // Return the prescriptions associated with the admission
-    res.status(200).json(admissionRecord.doctorPrescrption);
+    res.status(200).json(admissionRecord.doctorConsultant);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to fetch prescriptions" });
