@@ -627,3 +627,58 @@ export const fetchConsultant = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch prescriptions" });
   }
 };
+export const addPrescription = async (req, res) => {
+  try {
+    const { patientId, admissionId, prescription } = req.body;
+
+    // Find the patient by ID
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record
+    const admission = patient.admissionRecords.id(admissionId);
+    if (!admission) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Add the prescription
+    admission.doctorPrescriptions.push(prescription);
+
+    // Save the updated patient document
+    await patient.save();
+
+    res
+      .status(201)
+      .json({ message: "Prescription added successfully", prescription });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to add prescription", error: error.message });
+  }
+};
+export const fetchPrescription = async (req, res) => {
+  try {
+    const { patientId, admissionId } = req.params;
+
+    // Find the patient by ID
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record
+    const admission = patient.admissionRecords.id(admissionId);
+    if (!admission) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Return the prescriptions
+    res.status(200).json({ prescriptions: admission.doctorPrescriptions });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch prescriptions", error: error.message });
+  }
+};

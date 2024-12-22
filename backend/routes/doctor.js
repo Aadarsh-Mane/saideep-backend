@@ -1,11 +1,13 @@
 import express from "express";
 import {
   addConsultant,
+  addPrescription,
   admitPatient,
   admitPatientByDoctor,
   assignPatientToLab,
   dischargePatient,
   fetchConsultant,
+  fetchPrescription,
   getAdmittedPatientsByDoctor,
   getAllDoctorsProfiles,
   getAssignedPatients,
@@ -21,8 +23,8 @@ const doctorRouter = express.Router();
 doctorRouter.get("/getPatients", auth, getPatients);
 doctorRouter.get("/getDoctorProfile", auth, getDoctorProfile);
 doctorRouter.get("/getAllDoctorProfile", getAllDoctorsProfiles);
-doctorRouter.get("/getPrescriptions/:admissionId", fetchConsultant);
-doctorRouter.post("/addPresciption", addConsultant);
+doctorRouter.get("/getConsultant/:admissionId", fetchConsultant);
+doctorRouter.post("/addConsultant", addConsultant);
 doctorRouter.post("/admitPatient", auth, admitPatientByDoctor);
 doctorRouter.get("/getadmittedPatient", auth, getAdmittedPatientsByDoctor);
 doctorRouter.get("/getAssignedPatients", auth, getAssignedPatients);
@@ -35,6 +37,8 @@ doctorRouter.get(
   auth,
   getPatientsAssignedByDoctor
 );
+doctorRouter.post("/addPresciption", addPrescription);
+doctorRouter.get("/getPrescription/:patientId/:admissionId", fetchPrescription);
 
 // userRouter.get("/profile", auth, getUserProfile);
 // userRouter.patch("/edit-profile", auth, upload.single("image"), editProfile);

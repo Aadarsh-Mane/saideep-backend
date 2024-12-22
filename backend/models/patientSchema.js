@@ -52,8 +52,45 @@ const followUpSchema = new mongoose.Schema({
   fourhrivFluid: { type: String },
   fourhrurine: { type: String },
 });
+const prescriptionSchema = new mongoose.Schema({
+  medicine: {
+    name: { type: String, required: true }, // Name of the medicine
+    morning: { type: String }, // Whether to take in the morning
+    afternoon: { type: String }, // Whether to take in the afternoon
+    night: { type: String }, // Whether to take at night
+    comment: { type: String }, // Additional comments
+  },
+});
 
-// Patient schema
+const admissionRecordSchema = new mongoose.Schema({
+  admissionDate: { type: Date, default: Date.now },
+  status: { type: String, default: "Pending" },
+  reasonForAdmission: { type: String },
+  doctorConsultant: { type: [String] },
+  dischargeDate: { type: Date },
+  symptoms: { type: String },
+  initialDiagnosis: { type: String },
+  doctor: {
+    id: { type: mongoose.Schema.Types.ObjectId, ref: "hospitalDoctor" },
+    name: { type: String },
+  },
+  reports: [{ type: mongoose.Schema.Types.ObjectId, ref: "PatientReport" }],
+  followUps: [followUpSchema], // Array of follow-up records for each admission
+  doctorPrescriptions: [prescriptionSchema], // Array of prescriptions
+  symptomsByDoctor: { type: [String] }, // Array to store symptoms added by the doctor
+
+  vitals: [
+    {
+      temperature: { type: Number }, // Temperature in Celsius or Fahrenheit
+      pulse: { type: Number }, // Pulse rate
+      other: { type: String }, // For additional vital information
+      recordedAt: { type: Date, default: Date.now }, // Timestamp for when the vitals were recorded
+    },
+  ],
+
+  diagnosisByDoctor: { type: [String] }, // Array to store diagnoses added by the doctor
+});
+
 const patientSchema1 = new mongoose.Schema({
   patientId: { type: String, unique: true }, // Unique Patient ID
   name: { type: String, required: true },
@@ -61,24 +98,9 @@ const patientSchema1 = new mongoose.Schema({
   gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
   contact: { type: String, required: true },
   address: { type: String },
-  discharged: { type: Boolean, default: false }, // Discharge status
-  admissionRecords: [
-    {
-      admissionDate: { type: Date, default: Date.now },
-      status: { type: String, default: "Pending" },
-      reasonForAdmission: { type: String },
-      doctorConsultant: { type: [String] },
-      dischargeDate: { type: Date }, // Discharge date
-      symptoms: { type: String },
-      initialDiagnosis: { type: String },
-      doctor: {
-        id: { type: mongoose.Schema.Types.ObjectId, ref: "hospitalDoctor" },
-        name: { type: String },
-      }, // Reference to the doctor
-      reports: [{ type: mongoose.Schema.Types.ObjectId, ref: "PatientReport" }],
-      followUps: [followUpSchema], // Array of follow-up records for each admission
-    },
-  ],
+  discharged: { type: Boolean, default: false },
+  admissionRecords: [admissionRecordSchema],
+  followUps: [followUpSchema], // Array of follow-up records for each admission
 });
 
 const patientSchema = mongoose.model("Patient", patientSchema1);
