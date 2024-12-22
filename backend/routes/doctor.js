@@ -1,13 +1,19 @@
 import express from "express";
 import {
   addConsultant,
+  addDiagnosisByDoctor,
   addPrescription,
+  addSymptomsByDoctor,
+  addVitals,
   admitPatient,
   admitPatientByDoctor,
   assignPatientToLab,
   dischargePatient,
   fetchConsultant,
+  fetchDiagnosis,
   fetchPrescription,
+  fetchSymptoms,
+  fetchVitals,
   getAdmittedPatientsByDoctor,
   getAllDoctorsProfiles,
   getAssignedPatients,
@@ -39,6 +45,12 @@ doctorRouter.get(
 );
 doctorRouter.post("/addPresciption", addPrescription);
 doctorRouter.get("/getPrescription/:patientId/:admissionId", fetchPrescription);
+doctorRouter.post("/addSymptoms", addSymptomsByDoctor);
+doctorRouter.get("/fetchSympptoms/:patientId/:admissionId", fetchSymptoms);
+doctorRouter.get("/addVitals", addVitals);
+doctorRouter.get("/fetchVitals/:patientId/:admissionId", fetchVitals);
+doctorRouter.get("/addDiagnosis", addDiagnosisByDoctor);
+doctorRouter.get("/fetchDiagnosis/:patientId/:admissionId", fetchDiagnosis);
 
 // userRouter.get("/profile", auth, getUserProfile);
 // userRouter.patch("/edit-profile", auth, upload.single("image"), editProfile);
