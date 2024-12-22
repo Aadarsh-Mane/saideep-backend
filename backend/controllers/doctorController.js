@@ -774,7 +774,7 @@ export const addVitals = async (req, res) => {
 // Controller to fetch vitals by patientId and admissionId
 export const fetchVitals = async (req, res) => {
   try {
-    const { patientId, admissionId } = req.query;
+    const { patientId, admissionId } = req.params;
 
     // Validate that both patientId and admissionId are provided
     if (!patientId || !admissionId) {
@@ -838,7 +838,7 @@ export const addDiagnosisByDoctor = async (req, res) => {
 // Controller to fetch diagnosis by patientId and admissionId
 export const fetchDiagnosis = async (req, res) => {
   try {
-    const { patientId, admissionId } = req.query;
+    const { patientId, admissionId } = req.params;
 
     // Validate that both patientId and admissionId are provided
     if (!patientId || !admissionId) {
