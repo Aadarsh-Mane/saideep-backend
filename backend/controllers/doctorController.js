@@ -723,27 +723,30 @@ export const fetchSymptoms = async (req, res) => {
     }
 
     // Find the patient and admission record
-    const patient = await patientSchema.findOne(
-      { patientId, "admissionRecords._id": admissionId }, // Matching patient and admission record
-      { "admissionRecords.$.symptomsByDoctor": 1 } // Only return symptomsByDoctor for the specific admission
-    );
+    const patient = await patientSchema.findOne({ patientId });
 
     if (!patient) {
-      return res
-        .status(404)
-        .json({ message: "Patient or Admission not found." });
+      return res.status(404).json({ message: "Patient not found." });
     }
 
-    // Extract the symptoms from the admission record
-    const symptoms = patient.admissionRecords.find(
+    // Find the specific admission record
+    const admissionRecord = patient.admissionRecords.find(
       (record) => record._id.toString() === admissionId
-    ).symptomsByDoctor;
+    );
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    // Extract the symptomsByDoctor field
+    const symptoms = admissionRecord.symptomsByDoctor;
 
     res.status(200).json({ symptoms });
   } catch (error) {
     res.status(500).json({ message: "Server error.", error: error.message });
   }
 };
+
 export const addVitals = async (req, res) => {
   try {
     const { patientId, admissionId, vitals } = req.body;
@@ -783,28 +786,31 @@ export const fetchVitals = async (req, res) => {
         .json({ message: "Patient ID and Admission ID are required." });
     }
 
-    // Find the patient and admission record
-    const patient = await patientSchema.findOne(
-      { patientId, "admissionRecords._id": admissionId }, // Matching patient and admission record
-      { "admissionRecords.$.vitals": 1 } // Only return vitals for the specific admission
-    );
+    // Fetch the patient and admission records
+    const patient = await patientSchema.findOne({ patientId });
 
     if (!patient) {
-      return res
-        .status(404)
-        .json({ message: "Patient or Admission not found." });
+      return res.status(404).json({ message: "Patient not found." });
     }
 
-    // Extract the vitals from the admission record
-    const vitals = patient.admissionRecords.find(
+    // Find the specific admission record
+    const admissionRecord = patient.admissionRecords.find(
       (record) => record._id.toString() === admissionId
-    ).vitals;
+    );
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    // Extract the vitals
+    const { vitals } = admissionRecord;
 
     res.status(200).json({ vitals });
   } catch (error) {
     res.status(500).json({ message: "Server error.", error: error.message });
   }
 };
+
 export const addDiagnosisByDoctor = async (req, res) => {
   try {
     const { patientId, admissionId, diagnosis } = req.body;
@@ -847,22 +853,24 @@ export const fetchDiagnosis = async (req, res) => {
         .json({ message: "Patient ID and Admission ID are required." });
     }
 
-    // Find the patient and admission record
-    const patient = await patientSchema.findOne(
-      { patientId, "admissionRecords._id": admissionId }, // Matching patient and admission record
-      { "admissionRecords.$.diagnosisByDoctor": 1 } // Only return diagnosisByDoctor for the specific admission
-    );
+    // Find the patient document
+    const patient = await patientSchema.findOne({ patientId });
 
     if (!patient) {
-      return res
-        .status(404)
-        .json({ message: "Patient or Admission not found." });
+      return res.status(404).json({ message: "Patient not found." });
     }
 
-    // Extract the diagnosis from the admission record
-    const diagnosis = patient.admissionRecords.find(
+    // Locate the specific admission record
+    const admissionRecord = patient.admissionRecords.find(
       (record) => record._id.toString() === admissionId
-    ).diagnosisByDoctor;
+    );
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    // Extract diagnosisByDoctor
+    const diagnosis = admissionRecord.diagnosisByDoctor || [];
 
     res.status(200).json({ diagnosis });
   } catch (error) {

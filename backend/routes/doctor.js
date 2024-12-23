@@ -46,10 +46,10 @@ doctorRouter.get(
 doctorRouter.post("/addPresciption", addPrescription);
 doctorRouter.get("/getPrescription/:patientId/:admissionId", fetchPrescription);
 doctorRouter.post("/addSymptoms", addSymptomsByDoctor);
-doctorRouter.get("/fetchSympptoms/:patientId/:admissionId", fetchSymptoms);
-doctorRouter.get("/addVitals", addVitals);
+doctorRouter.get("/fetchSymptoms/:patientId/:admissionId", fetchSymptoms);
+doctorRouter.post("/addVitals", addVitals);
 doctorRouter.get("/fetchVitals/:patientId/:admissionId", fetchVitals);
-doctorRouter.get("/addDiagnosis", addDiagnosisByDoctor);
+doctorRouter.post("/addDiagnosis", addDiagnosisByDoctor);
 doctorRouter.get("/fetchDiagnosis/:patientId/:admissionId", fetchDiagnosis);
 
 // userRouter.get("/profile", auth, getUserProfile);
