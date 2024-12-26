@@ -6,21 +6,58 @@ import cloudinary from "../helpers/cloudinary.js";
 import LabReport from "../models/labreportSchema.js";
 import { Readable } from "stream";
 
+// export const getPatientsAssignedToLab = async (req, res) => {
+//   try {
+//     // Fetch all lab reports and populate patient and doctor details
+//     const labReports = await LabReport.find()
+//       .populate({
+//         path: "patientId",
+//         select: "name age gender contact admissionRecords", // Only include the necessary fields
+//         match: {
+//           // Only include patients with non-empty admissionRecords array
+//           admissionRecords: { $not: { $size: 0 } },
+//         },
+//       })
+//       .populate({
+//         path: "doctorId",
+//         select: "doctorName email",
+//       });
+
+//     if (!labReports || labReports.length === 0) {
+//       return res
+//         .status(404)
+//         .json({ message: "No patients assigned to the lab." });
+//     }
+
+//     // Exclude followUps from the populated patient data
+//     labReports.forEach((report) => {
+//       report.patientId.admissionRecords.forEach((record) => {
+//         delete record.followUps; // Remove the followUps field from each admission record
+//       });
+//     });
+
+//     res.status(200).json({
+//       message: "Patients assigned to the lab retrieved successfully",
+//       labReports,
+//     });
+//   } catch (error) {
+//     console.error("Error retrieving patients assigned to the lab:", error);
+//     res
+//       .status(500)
+//       .json({ message: "Error retrieving patients", error: error.message });
+//   }
+// };
 export const getPatientsAssignedToLab = async (req, res) => {
   try {
-    // Fetch all lab reports and populate patient and doctor details
+    // Fetch all lab reports and populate necessary patient and doctor fields
     const labReports = await LabReport.find()
       .populate({
         path: "patientId",
-        select: "name age gender contact admissionRecords", // Only include the necessary fields
-        match: {
-          // Only include patients with non-empty admissionRecords array
-          admissionRecords: { $not: { $size: 0 } },
-        },
+        select: "name age gender contact discharged", // Added 'discharged' field
       })
       .populate({
         path: "doctorId",
-        select: "doctorName email",
+        select: "doctorName email", // Only include necessary doctor fields
       });
 
     if (!labReports || labReports.length === 0) {
@@ -28,13 +65,6 @@ export const getPatientsAssignedToLab = async (req, res) => {
         .status(404)
         .json({ message: "No patients assigned to the lab." });
     }
-
-    // Exclude followUps from the populated patient data
-    labReports.forEach((report) => {
-      report.patientId.admissionRecords.forEach((record) => {
-        delete record.followUps; // Remove the followUps field from each admission record
-      });
-    });
 
     res.status(200).json({
       message: "Patients assigned to the lab retrieved successfully",
@@ -53,7 +83,8 @@ export const generateReportPdfForPatient = async (req, res) => {
   const __filename = fileURLToPath(import.meta.url);
   const __dirname = path.dirname(__filename);
   try {
-    const { admissionId, patientId, labTestName, labType } = req.body;
+    const { admissionId, patientId, labTestName, labType, labReportId } =
+      req.body;
     const file = req.file; // Get the uploaded PDF file
 
     if (!admissionId || !patientId || !labTestName || !labType || !file) {
@@ -93,14 +124,9 @@ export const generateReportPdfForPatient = async (req, res) => {
     const reportUrl = uploadResponse.data.webViewLink; // Link to the uploaded file
 
     // Save report to MongoDB
-    let labReport = await LabReport.findOne({ admissionId, patientId });
-
+    const labReport = await LabReport.findById(labReportId);
     if (!labReport) {
-      labReport = new LabReport({
-        admissionId,
-        patientId,
-        reports: [],
-      });
+      return res.status(404).json({ message: "Lab report not found" });
     }
 
     labReport.reports.push({

@@ -74,7 +74,6 @@ const admissionRecordSchema = new mongoose.Schema({
     id: { type: mongoose.Schema.Types.ObjectId, ref: "hospitalDoctor" },
     name: { type: String },
   },
-  reports: [{ type: mongoose.Schema.Types.ObjectId, ref: "PatientReport" }],
   followUps: [followUpSchema], // Array of follow-up records for each admission
   doctorPrescriptions: [prescriptionSchema], // Array of prescriptions
   symptomsByDoctor: { type: [String] }, // Array to store symptoms added by the doctor
