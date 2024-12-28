@@ -88,6 +88,11 @@ const admissionRecordSchema = new mongoose.Schema({
   ],
 
   diagnosisByDoctor: { type: [String] }, // Array to store diagnoses added by the doctor
+  conditonAtDischarge: {
+    type: String,
+    enum: ["Discharged", "Transferred", "A.M.A.", "Absconded", "Expired"],
+    default: "Discharged",
+  },
 });
 
 const patientSchema1 = new mongoose.Schema({

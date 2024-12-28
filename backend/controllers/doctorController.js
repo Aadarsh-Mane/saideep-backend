@@ -877,3 +877,66 @@ export const fetchDiagnosis = async (req, res) => {
     res.status(500).json({ message: "Server error.", error: error.message });
   }
 };
+export const updateConditionAtDischarge = async (req, res) => {
+  const { admissionId, conditionAtDischarge } = req.body;
+  const doctorId = req.user.id; // Assuming doctorId is passed in middleware and available in req.user.id
+
+  // Validate request body
+  if (!admissionId || !conditionAtDischarge) {
+    return res
+      .status(400)
+      .json({ message: "Admission ID and condition are required." });
+  }
+
+  // Validate the condition value
+  const validConditions = [
+    "Discharged",
+    "Transferred",
+    "A.M.A.",
+    "Absconded",
+    "Expired",
+  ];
+  if (!validConditions.includes(conditionAtDischarge)) {
+    return res
+      .status(400)
+      .json({ message: "Invalid conditionAtDischarge value." });
+  }
+
+  try {
+    // Find the patient and admission record
+    const patient = await patientSchema.findOne({
+      "admissionRecords._id": admissionId, // Match the admission record by ID
+      "admissionRecords.doctor.id": doctorId, // Ensure the doctor is the one assigned to the admission
+    });
+
+    if (!patient) {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Admission record not found or you are not authorized to update this record.",
+        });
+    }
+
+    // Update the conditionAtDischarge field
+    const updateResult = await patientSchema.updateOne(
+      { "admissionRecords._id": admissionId }, // Find the admission record by ID
+      {
+        $set: {
+          "admissionRecords.$.conditionAtDischarge": conditionAtDischarge, // Update the condition field
+        },
+      }
+    );
+
+    if (updateResult.nModified === 0) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    res
+      .status(200)
+      .json({ message: "Condition at discharge updated successfully." });
+  } catch (error) {
+    console.error("Error updating condition at discharge:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
