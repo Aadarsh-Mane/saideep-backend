@@ -54,12 +54,29 @@ const followUpSchema = new mongoose.Schema({
 });
 const prescriptionSchema = new mongoose.Schema({
   medicine: {
-    name: { type: String, required: true }, // Name of the medicine
+    name: { type: String }, // Name of the medicine
     morning: { type: String }, // Whether to take in the morning
     afternoon: { type: String }, // Whether to take in the afternoon
     night: { type: String }, // Whether to take at night
     comment: { type: String }, // Additional comments
+    date: { type: Date, default: Date.now }, // Timestamp for when the prescription was added
   },
+});
+const consultantSchema = new mongoose.Schema({
+  allergies: { type: String }, // Name of the medicine
+  cheifComplaint: { type: String }, // Whether to take in the morning
+  describeAllergies: { type: String },
+  historyOfPresentIllness: { type: String },
+  personalHabits: { type: String },
+  familyHistory: { type: String },
+  menstrualHistory: { type: String },
+  wongBaker: { type: String },
+  visualAnalogue: { type: String },
+  relevantPreviousInvestigations: { type: String },
+
+  immunizationHistory: { type: String },
+  pastMedicalHistory: { type: String },
+  date: { type: String },
 });
 
 const admissionRecordSchema = new mongoose.Schema({
@@ -67,7 +84,14 @@ const admissionRecordSchema = new mongoose.Schema({
   status: { type: String, default: "Pending" },
   reasonForAdmission: { type: String },
   doctorConsultant: { type: [String] },
+  conditionAtDischarge: {
+    type: String,
+    enum: ["Discharged", "Transferred", "A.M.A.", "Absconded", "Expired"],
+    default: "Discharged",
+  },
+  amountToBePayed: { type: Number },
   dischargeDate: { type: Date },
+  weight: { type: Number },
   symptoms: { type: String },
   initialDiagnosis: { type: String },
   doctor: {
@@ -76,6 +100,7 @@ const admissionRecordSchema = new mongoose.Schema({
   },
   followUps: [followUpSchema], // Array of follow-up records for each admission
   doctorPrescriptions: [prescriptionSchema], // Array of prescriptions
+  doctorConsulting: [consultantSchema],
   symptomsByDoctor: { type: [String] }, // Array to store symptoms added by the doctor
 
   vitals: [
@@ -88,11 +113,6 @@ const admissionRecordSchema = new mongoose.Schema({
   ],
 
   diagnosisByDoctor: { type: [String] }, // Array to store diagnoses added by the doctor
-  conditonAtDischarge: {
-    type: String,
-    enum: ["Discharged", "Transferred", "A.M.A.", "Absconded", "Expired"],
-    default: "Discharged",
-  },
 });
 
 const patientSchema1 = new mongoose.Schema({
@@ -103,6 +123,7 @@ const patientSchema1 = new mongoose.Schema({
   contact: { type: String, required: true },
   address: { type: String },
   discharged: { type: Boolean, default: false },
+  pendingAmount: { type: Number, default: 0 },
   admissionRecords: [admissionRecordSchema],
   followUps: [followUpSchema], // Array of follow-up records for each admission
 });

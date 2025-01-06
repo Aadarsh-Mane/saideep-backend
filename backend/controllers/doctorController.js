@@ -424,6 +424,11 @@ export const dischargePatient = async (req, res) => {
     patientHistory.history.push({
       admissionId,
       admissionDate: admissionRecord.admissionDate,
+
+      previousRemainingAmount: patient.pendingAmount,
+      amountToBePayed: admissionRecord.amountToBePayed,
+      conditionAtDischarge: admissionRecord.conditionAtDischarge,
+      weight: admissionRecord.weight,
       dischargeDate: new Date(),
       reasonForAdmission: admissionRecord.reasonForAdmission,
       symptoms: admissionRecord.symptoms,
@@ -435,6 +440,11 @@ export const dischargePatient = async (req, res) => {
         labTestNameGivenByDoctor: report.labTestNameGivenByDoctor,
         reports: report.reports,
       })), // Add relevant lab report details
+      doctorPrescriptions: admissionRecord.doctorPrescriptions,
+      doctorConsulting: admissionRecord.doctorConsulting,
+      symptomsByDoctor: admissionRecord.symptomsByDoctor,
+      vitals: admissionRecord.vitals,
+      diagnosisByDoctor: admissionRecord.diagnosisByDoctor,
     });
 
     // Save the history document
@@ -686,7 +696,7 @@ export const fetchPrescription = async (req, res) => {
 export const addSymptomsByDoctor = async (req, res) => {
   try {
     const { patientId, admissionId, symptoms } = req.body;
-
+    console.log;
     if (!patientId || !admissionId || !symptoms) {
       return res.status(400).json({
         message: "Patient ID, Admission ID, and symptoms are required.",
@@ -714,7 +724,7 @@ export const addSymptomsByDoctor = async (req, res) => {
 export const fetchSymptoms = async (req, res) => {
   try {
     const { patientId, admissionId } = req.params;
-
+    console.log("checking", patientId, admissionId);
     // Validate that both patientId and admissionId are provided
     if (!patientId || !admissionId) {
       return res
@@ -878,17 +888,26 @@ export const fetchDiagnosis = async (req, res) => {
   }
 };
 export const updateConditionAtDischarge = async (req, res) => {
-  const { admissionId, conditionAtDischarge } = req.body;
-  const doctorId = req.user.id; // Assuming doctorId is passed in middleware and available in req.user.id
+  const { admissionId, conditionAtDischarge, amountToBePayed } = req.body;
+  console.log(req.body);
+  const doctorId = req.userId;
 
-  // Validate request body
   if (!admissionId || !conditionAtDischarge) {
     return res
       .status(400)
       .json({ message: "Admission ID and condition are required." });
   }
 
-  // Validate the condition value
+  if (
+    amountToBePayed == null ||
+    isNaN(amountToBePayed) ||
+    amountToBePayed < 0
+  ) {
+    return res
+      .status(400)
+      .json({ message: "Valid amountToBePayed is required." });
+  }
+
   const validConditions = [
     "Discharged",
     "Transferred",
@@ -903,40 +922,176 @@ export const updateConditionAtDischarge = async (req, res) => {
   }
 
   try {
-    // Find the patient and admission record
-    const patient = await patientSchema.findOne({
-      "admissionRecords._id": admissionId, // Match the admission record by ID
-      "admissionRecords.doctor.id": doctorId, // Ensure the doctor is the one assigned to the admission
-    });
-
-    if (!patient) {
-      return res
-        .status(404)
-        .json({
-          message:
-            "Admission record not found or you are not authorized to update this record.",
-        });
-    }
-
-    // Update the conditionAtDischarge field
-    const updateResult = await patientSchema.updateOne(
-      { "admissionRecords._id": admissionId }, // Find the admission record by ID
+    // Find and update the specific admission record in a single operation
+    const patient = await patientSchema.findOneAndUpdate(
+      {
+        admissionRecords: {
+          $elemMatch: {
+            _id: admissionId,
+            "doctor.id": doctorId,
+          },
+        },
+      },
       {
         $set: {
-          "admissionRecords.$.conditionAtDischarge": conditionAtDischarge, // Update the condition field
+          "admissionRecords.$.conditionAtDischarge": conditionAtDischarge,
+          "admissionRecords.$.amountToBePayed": amountToBePayed,
         },
-      }
+      },
+      { new: true }
     );
 
-    if (updateResult.nModified === 0) {
-      return res.status(404).json({ message: "Admission record not found." });
+    if (!patient) {
+      return res.status(404).json({
+        message:
+          "Admission record not found or you are not authorized to update this record.",
+      });
     }
 
-    res
-      .status(200)
-      .json({ message: "Condition at discharge updated successfully." });
+    res.status(200).json({
+      message:
+        "Condition at discharge and payment amount updated successfully.",
+    });
   } catch (error) {
     console.error("Error updating condition at discharge:", error);
     res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+export const addDoctorConsultant = async (req, res) => {
+  try {
+    const { patientId, admissionId, consulting } = req.body;
+    console.log("Request Body:", req.body.consulting); // Check the structure of the incoming data
+
+    // Find the patient by ID
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record
+    const admission = patient.admissionRecords.id(admissionId);
+    if (!admission) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Add the consulting data to the doctorConsulting array
+    admission.doctorConsulting.push(consulting);
+
+    console.log("Updated doctorConsulting:", admission.doctorConsulting); // Log to check if data is added correctly
+
+    // Save the updated patient document
+    await patient.save();
+
+    res
+      .status(201)
+      .json({ message: "Consulting added successfully", consulting });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to add consulting", error: error.message });
+  }
+};
+export const getDoctorConsulting = async (req, res) => {
+  try {
+    const { patientId, admissionId } = req.params; // Get parameters from the URL
+
+    // Find the patient by ID
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record
+    const admission = patient.admissionRecords.id(admissionId);
+    if (!admission) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Return the doctorConsulting array
+    res.status(200).json({
+      message: "Doctor consulting fetched successfully",
+      doctorConsulting: admission.doctorConsulting,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Failed to fetch doctor consulting",
+      error: error.message,
+    });
+  }
+};
+export const amountToBePayed = async (req, res) => {
+  try {
+    const { patientId, admissionId, amount } = req.body;
+
+    // Validate input
+    if (
+      !patientId ||
+      !admissionId ||
+      typeof amount !== "number" ||
+      amount < 0
+    ) {
+      return res.status(400).json({ message: "Invalid input provided." });
+    }
+
+    // Find the patient by ID
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
+    // Find the specific admission record
+    const admissionRecord = patient.admissionRecords.id(admissionId);
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    // Update the amount to be paid
+    admissionRecord.amountToBePayed = amount;
+
+    // Save the changes to the database
+    await patient.save();
+
+    res.status(200).json({
+      message: "Amount updated successfully.",
+      admissionRecord,
+    });
+  } catch (error) {
+    console.error("Error updating amount to be paid:", error);
+    res.status(500).json({ message: "Server error.", error });
+  }
+};
+export const getPatientHistory1 = async (req, res) => {
+  const { patientId } = req.params;
+
+  // Validate if the patientId is provided
+  if (!patientId) {
+    return res.status(400).json({ error: "Patient ID is required" });
+  }
+
+  try {
+    // Fetch the patient history using the provided patientId
+    const patientHistory = await PatientHistory.findOne(
+      { patientId },
+      {
+        "history.followUps": 0, // Exclude follow-ups from the result
+      }
+    );
+
+    // Check if history exists for the patient
+    if (!patientHistory) {
+      return res
+        .status(404)
+        .json({ error: `No history found for patient ID: ${patientId}` });
+    }
+
+    // Return the patient history
+    res.status(200).json({
+      message: "Patient history fetched successfully",
+      history: patientHistory,
+    });
+  } catch (error) {
+    console.error("Error fetching patient history:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };

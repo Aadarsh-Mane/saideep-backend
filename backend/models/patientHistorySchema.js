@@ -69,7 +69,9 @@ const patientHistorySchema = new mongoose.Schema({
       dischargeDate: Date, // When the patient was discharged
       reasonForAdmission: String,
       doctorConsultant: { type: [String] },
-
+      amountToBePayed: { type: Number }, //
+      conditionAtDischarge: String,
+      previousRemainingAmount: { type: Number },
       symptoms: String,
       initialDiagnosis: String,
       doctor: {
@@ -92,6 +94,45 @@ const patientHistorySchema = new mongoose.Schema({
           ],
         },
       ], // New field for lab reports
+      weight: { type: Number },
+      doctorPrescriptions: [
+        {
+          medicine: {
+            name: { type: String }, // Name of the medicine
+            morning: { type: String }, // Morning dose
+            afternoon: { type: String }, // Afternoon dose
+            night: { type: String }, // Night dose
+            comment: { type: String }, // Additional comments
+            date: { type: Date, default: Date.now }, // Timestamp
+          },
+        },
+      ],
+      doctorConsulting: [
+        {
+          allergies: { type: String },
+          cheifComplaint: { type: String },
+          describeAllergies: { type: String },
+          historyOfPresentIllness: { type: String },
+          personalHabits: { type: String },
+          familyHistory: { type: String },
+          menstrualHistory: { type: String },
+          wongBaker: { type: String },
+          visualAnalogue: { type: String },
+          relevantPreviousInvestigations: { type: String },
+          immunizationHistory: { type: String },
+          pastMedicalHistory: { type: String },
+        },
+      ],
+      symptomsByDoctor: { type: [String] }, // Array to store symptoms added by the doctor
+      vitals: [
+        {
+          temperature: { type: Number },
+          pulse: { type: Number },
+          other: { type: String },
+          recordedAt: { type: Date, default: Date.now },
+        },
+      ],
+      diagnosisByDoctor: { type: [String] }, // Array to store diagnoses added by the doctor
     },
   ],
 });

@@ -16,6 +16,7 @@
     "cloudinary": "^2.5.1",
     "cors": "^2.8.5",
     "dayjs": "^1.11.13",
+    "dayjs-plugin-utc": "^0.1.2",
     "express": "^4.21.1",
     "firebase-admin": "^13.0.1",
     "googleapis": "^144.0.0",

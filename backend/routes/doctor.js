@@ -2,11 +2,13 @@ import express from "express";
 import {
   addConsultant,
   addDiagnosisByDoctor,
+  addDoctorConsultant,
   addPrescription,
   addSymptomsByDoctor,
   addVitals,
   admitPatient,
   admitPatientByDoctor,
+  amountToBePayed,
   assignPatientToLab,
   dischargePatient,
   fetchConsultant,
@@ -18,9 +20,12 @@ import {
   getAllDoctorsProfiles,
   getAssignedPatients,
   getDischargedPatientsByDoctor,
+  getDoctorConsulting,
   getDoctorProfile,
+  getPatientHistory1,
   getPatients,
   getPatientsAssignedByDoctor,
+  updateConditionAtDischarge,
 } from "../controllers/doctorController.js";
 import { auth } from "../middleware/auth.js";
 
@@ -50,7 +55,15 @@ doctorRouter.get("/fetchSymptoms/:patientId/:admissionId", fetchSymptoms);
 doctorRouter.post("/addVitals", addVitals);
 doctorRouter.get("/fetchVitals/:patientId/:admissionId", fetchVitals);
 doctorRouter.post("/addDiagnosis", addDiagnosisByDoctor);
+doctorRouter.post("/addDoctorConsultant", addDoctorConsultant);
 doctorRouter.get("/fetchDiagnosis/:patientId/:admissionId", fetchDiagnosis);
+doctorRouter.post("/updateCondition", auth, updateConditionAtDischarge);
+doctorRouter.get(
+  "/doctorConsulting/:patientId/:admissionId",
+  getDoctorConsulting
+);
+doctorRouter.post("/amountToBePayed", amountToBePayed);
+doctorRouter.get("/getPatientHistory1/:patientId", getPatientHistory1);
 
 // userRouter.get("/profile", auth, getUserProfile);
 // userRouter.patch("/edit-profile", auth, upload.single("image"), editProfile);

@@ -3,6 +3,9 @@ import {
   acceptAppointment,
   addPatient,
   assignDoctor,
+  dischargePatientByReception,
+  generateBillForDischargedPatient,
+  getDischargedPatientHistory,
   getDoctorsPatient,
   listDoctors,
   listPatients,
@@ -26,6 +29,12 @@ receiptionRouter.get(
   getDoctorsPatient
 );
 receiptionRouter.post("/acceptAppointment", acceptAppointment);
+receiptionRouter.post("/dischargePatient", dischargePatientByReception);
+receiptionRouter.post("/bill", generateBillForDischargedPatient);
 receiptionRouter.post("/addDoctorToPatient");
+receiptionRouter.get(
+  "/getDischargedPatient/:patientId",
+  getDischargedPatientHistory
+);
 
 export default receiptionRouter;
