@@ -70,6 +70,10 @@ const patientHistorySchema = new mongoose.Schema({
       reasonForAdmission: String,
       doctorConsultant: { type: [String] },
       amountToBePayed: { type: Number }, //
+      dischargedByReception: {
+        type: Boolean, //
+        default: false,
+      },
       conditionAtDischarge: String,
       previousRemainingAmount: { type: Number },
       symptoms: String,

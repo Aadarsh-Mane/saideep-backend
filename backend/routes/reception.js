@@ -7,6 +7,7 @@ import {
   generateBillForDischargedPatient,
   getDischargedPatientHistory,
   getDoctorsPatient,
+  listAllPatientsWithLastRecord,
   listDoctors,
   listPatients,
 } from "../controllers/admin/receiptionController.js";
@@ -36,5 +37,6 @@ receiptionRouter.get(
   "/getDischargedPatient/:patientId",
   getDischargedPatientHistory
 );
+receiptionRouter.get("/getAllDischargedPatient", listAllPatientsWithLastRecord);
 
 export default receiptionRouter;
