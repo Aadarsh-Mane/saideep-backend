@@ -2064,7 +2064,10 @@ export const getDoctorAdvic1 = async (req, res) => {
       `;
 
     // Generate PDF from HTML
-    const browser = await puppeteer.launch();
+    // const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      args: ["--no-sandbox", "--disable-setuid-sandbox"], // These arguments make it work on cloud environments
+    });
     const page = await browser.newPage();
     await page.setContent(doctorAdviceHtml);
     const pdfBuffer = await page.pdf({ format: "A4" });
