@@ -9,6 +9,7 @@ import puppeteer from "puppeteer";
 import path from "path";
 // import fs from "fs";
 import fs from "fs/promises";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const getPatients = async (req, res) => {
   console.log(req.usertype);
@@ -664,7 +665,7 @@ const loadData = async () => {
 };
 
 // Load data when the module is loaded
-loadData();
+// loadData();
 
 export const suggestions = (req, res) => {
   try {
@@ -1145,5 +1146,104 @@ export const getPatientHistory1 = async (req, res) => {
   } catch (error) {
     console.error("Error fetching patient history:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+// Load API key from environment variables or directly set it here
+const genAI = new GoogleGenerativeAI("AIzaSyD2b5871MdBgJErszACzmBhtpLZrQe-U2k");
+
+export const askQuestion = async (req, res) => {
+  const { question } = req.body;
+
+  try {
+    // Fetch all patients dynamically from the database
+    const patients = await patientSchema.find().sort({ _id: -1 });
+
+    if (!patients || patients.length === 0) {
+      return res.send("No patient records available.");
+    }
+
+    // Identify the patient mentioned in the question
+    const patient = patients.find((p) =>
+      question.toLowerCase().includes(p.name.toLowerCase())
+    );
+
+    if (!patient) {
+      return res.send("No matching patient found for your query.");
+    }
+
+    // Check if the question is asking for prescriptions
+    if (
+      question.toLowerCase().includes("prescription") ||
+      question.toLowerCase().includes("medicine")
+    ) {
+      const admissionDetails = patient.admissionRecords.map((record, index) => {
+        const prescriptions = record.doctorPrescriptions.map(
+          (prescription, i) => {
+            const med = prescription.medicine;
+            return `\n    Prescription ${i + 1}:
+    - Medicine: ${med.name}
+    - Morning: ${med.morning}
+    - Afternoon: ${med.afternoon}
+    - Night: ${med.night}
+    - Comment: ${med.comment}
+    - Prescribed Date: ${new Date(med.date).toLocaleDateString()}`;
+          }
+        );
+
+        return `\n  Admission ${index + 1}:
+  - Admission Date: ${new Date(record.admissionDate).toLocaleDateString()}
+  - Discharge Status: ${record.conditionAtDischarge}
+  - Reason for Admission: ${record.reasonForAdmission}
+  - Prescriptions: ${
+    prescriptions.length > 0 ? prescriptions.join("") : "No prescriptions found"
+  }`;
+      });
+
+      const prescriptionResponse = `Prescriptions for ${patient.name}:
+${
+  admissionDetails.length > 0
+    ? admissionDetails.join("\n")
+    : "No admission records found."
+}`;
+
+      return res.send(prescriptionResponse);
+    }
+
+    // Otherwise, provide basic details
+    const basicDetails = `Patient Details:
+- Name: ${patient.name}
+- Patient ID: ${patient.patientId}
+- Age: ${patient.age}
+- Gender: ${patient.gender}
+- Contact: ${patient.contact}
+- Address: ${patient.address || "N/A"}
+- DOB: ${patient.dob || "N/A"}
+- Discharged: ${patient.discharged ? "Yes" : "No"}
+- Pending Amount: ${patient.pendingAmount}`;
+
+    return res.send(basicDetails);
+  } catch (error) {
+    console.error("Error processing question:", error.message);
+    return res.status(500).send("Failed to process the question.");
+  }
+};
+export const askQuestionAI = async (req, res) => {
+  const { question } = req.body;
+
+  try {
+    // Initialize the model
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Generate content based on the question prompt
+    const result = await model.generateContent(question);
+
+    // Respond with the full result or just the AI-generated text
+    return res.json({ answer: result.response.text() });
+  } catch (error) {
+    console.error("Error communicating with Gemini AI:", error.message);
+
+    // Respond with an error message
+    return res.status(500).json({ error: error.message });
   }
 };
