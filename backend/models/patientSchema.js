@@ -122,6 +122,11 @@ const patientSchema1 = new mongoose.Schema({
   gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
   contact: { type: String, required: true },
   address: { type: String },
+  dob: { type: String },
+  imageUrl: {
+    type: String,
+    default: " ",
+  },
   discharged: { type: Boolean, default: false },
   pendingAmount: { type: Number, default: 0 },
   admissionRecords: [admissionRecordSchema],

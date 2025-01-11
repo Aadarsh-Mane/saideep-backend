@@ -13,6 +13,7 @@ import fs from "fs";
 import path from "path";
 import { Readable } from "stream";
 import puppeteer from "puppeteer";
+import { response } from "express";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -147,124 +148,281 @@ export const addPatient = async (req, res) => {
     address,
     weight,
     caste,
+    dob,
     reasonForAdmission,
     symptoms,
     initialDiagnosis,
     isReadmission,
   } = req.body;
-
+  const file = req.file;
   try {
+    console.log(req.body);
     let patient;
+    if (file) {
+      const auth = new google.auth.GoogleAuth({
+        keyFile: "./apikey.json", // Path to your Google service account key file
+        scopes: ["https://www.googleapis.com/auth/drive"],
+      });
+      const drive = google.drive({ version: "v3", auth });
 
-    if (isReadmission) {
-      // Fetch patient by name and contact (or implement different search criteria)
-      // patient = await patientSchema.findOne({ name, contact });
-      if (!req.body.patientId)
-        return res
-          .status(404)
-          .json({ message: "Patient ID is required for readmission." });
-      patient = await patientSchema.findOne({ patientId: req.body.patientId }); // Assuming patientId is provided for readmission
-      if (!patient.discharged)
-        return res.status(400).json({ message: "Patient is not discharged." });
-      if (patient) {
-        let daysSinceLastAdmission = null;
+      // Convert buffer to a readable stream
+      const bufferStream = new Readable();
+      bufferStream.push(file.buffer);
+      bufferStream.push(null);
 
-        // Check if the patient has been discharged
-        if (!patient.discharged) {
-          // Calculate days since last admission if not discharged
-          if (patient.admissionRecords.length > 0) {
-            const lastAdmission =
-              patient.admissionRecords[patient.admissionRecords.length - 1]
-                .admissionDate;
-            daysSinceLastAdmission = dayjs().diff(dayjs(lastAdmission), "day");
-          }
-        } else {
-          // If discharged, check discharge history
-          const patientHistory = await PatientHistory.findOne({
-            patientId: patient.patientId,
-          });
+      // Upload file to Google Drive
+      const fileMetadata = {
+        name: file.originalname, // Use the original file name
+        parents: ["1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV"], // Replace with your shared folder ID
+      };
+      const media = {
+        mimeType: file.mimetype,
+        body: bufferStream, // Stream the buffer directly
+      };
 
-          if (patientHistory) {
-            // Fetch the latest discharge date
-            const lastDischarge = patientHistory.history
-              .filter((entry) => entry.dischargeDate)
-              .sort((a, b) =>
-                dayjs(b.dischargeDate).isBefore(a.dischargeDate) ? -1 : 1
-              )[0];
+      const uploadResponse = await drive.files.create({
+        resource: fileMetadata,
+        media: media,
+        fields: "id, webViewLink",
+      });
 
-            if (lastDischarge) {
+      const imageUrl = uploadResponse.data.webViewLink; // Link to the uploaded file
+
+      if (isReadmission === "true") {
+        // Fetch patient by name and contact (or implement different search criteria)
+        // patient = await patientSchema.findOne({ name, contact });
+        if (!req.body.patientId)
+          return res
+            .status(404)
+            .json({ error: "Patient ID is required for readmission." });
+        patient = await patientSchema.findOne({
+          patientId: req.body.patientId,
+        }); // Assuming patientId is provided for readmission
+        if (!patient.discharged)
+          return res
+            .status(400)
+            .json({ message: "Patient is not discharged." });
+        if (patient) {
+          let daysSinceLastAdmission = null;
+
+          // Check if the patient has been discharged
+          if (!patient.discharged) {
+            // Calculate days since last admission if not discharged
+            if (patient.admissionRecords.length > 0) {
+              const lastAdmission =
+                patient.admissionRecords[patient.admissionRecords.length - 1]
+                  .admissionDate;
               daysSinceLastAdmission = dayjs().diff(
-                dayjs(lastDischarge.dischargeDate),
+                dayjs(lastAdmission),
                 "day"
               );
             }
+          } else {
+            // If discharged, check discharge history
+            const patientHistory = await PatientHistory.findOne({
+              patientId: patient.patientId,
+            });
+
+            if (patientHistory) {
+              // Fetch the latest discharge date
+              const lastDischarge = patientHistory.history
+                .filter((entry) => entry.dischargeDate)
+                .sort((a, b) =>
+                  dayjs(b.dischargeDate).isBefore(a.dischargeDate) ? -1 : 1
+                )[0];
+
+              if (lastDischarge) {
+                daysSinceLastAdmission = dayjs().diff(
+                  dayjs(lastDischarge.dischargeDate),
+                  "day"
+                );
+              }
+            }
+
+            // Set discharged status to false for re-admission
+            patient.discharged = false;
           }
 
-          // Set discharged status to false for re-admission
-          patient.discharged = false;
+          // Update all patient details
+          patient.name = name;
+          patient.age = age;
+          patient.gender = gender;
+          patient.contact = contact;
+          patient.address = address;
+          patient.caste = caste;
+          patient.imageUrl = imageUrl;
+
+          // Add new admission record for re-admission
+          patient.admissionRecords.push({
+            admissionDate: new Date(),
+            reasonForAdmission,
+            weight,
+            symptoms,
+            initialDiagnosis,
+          });
+
+          // Save updated patient record
+          await patient.save();
+
+          return res.status(200).json({
+            message: `Patient ${name} re-admitted successfully.`,
+            patientDetails: patient,
+            daysSinceLastAdmission,
+            admissionRecords: patient.admissionRecords,
+          });
+        } else {
+          return res
+            .status(404)
+            .json({ message: "Patient not found for readmission." });
         }
+      } else {
+        // If not a readmission, create a new patient
+        const patientId = generatePatientId(name);
 
-        // Update all patient details
-        patient.name = name;
-        patient.age = age;
-        patient.gender = gender;
-        patient.contact = contact;
-        patient.address = address;
-        patient.weight = weight;
-        patient.caste = caste;
-
-        // Add new admission record for re-admission
-        patient.admissionRecords.push({
-          admissionDate: new Date(),
-          reasonForAdmission,
-          weight,
-          symptoms,
-          initialDiagnosis,
+        patient = new patientSchema({
+          patientId,
+          name,
+          age,
+          gender,
+          contact,
+          address,
+          caste,
+          imageUrl,
+          admissionRecords: [
+            {
+              admissionDate: new Date(),
+              reasonForAdmission,
+              symptoms,
+              initialDiagnosis,
+              weight,
+            },
+          ],
         });
 
-        // Save updated patient record
         await patient.save();
 
         return res.status(200).json({
-          message: `Patient ${name} re-admitted successfully.`,
+          message: `Patient ${name} added successfully with ID ${patientId}.`,
           patientDetails: patient,
-          daysSinceLastAdmission,
-          admissionRecords: patient.admissionRecords,
         });
-      } else {
-        return res
-          .status(404)
-          .json({ message: "Patient not found for readmission." });
       }
     } else {
-      // If not a readmission, create a new patient
-      const patientId = generatePatientId(name);
+      if (isReadmission === "true") {
+        // Fetch patient by name and contact (or implement different search criteria)
+        // patient = await patientSchema.findOne({ name, contact });
+        if (!req.body.patientId)
+          return res
+            .status(404)
+            .json({ error: "Patient ID is required for readmission." });
+        patient = await patientSchema.findOne({
+          patientId: req.body.patientId,
+        }); // Assuming patientId is provided for readmission
+        if (!patient.discharged)
+          return res
+            .status(400)
+            .json({ message: "Patient is not discharged." });
+        if (patient) {
+          let daysSinceLastAdmission = null;
 
-      patient = new patientSchema({
-        patientId,
-        name,
-        age,
-        gender,
-        contact,
-        address,
-        weight,
-        caste,
-        admissionRecords: [
-          {
+          // Check if the patient has been discharged
+          if (!patient.discharged) {
+            // Calculate days since last admission if not discharged
+            if (patient.admissionRecords.length > 0) {
+              const lastAdmission =
+                patient.admissionRecords[patient.admissionRecords.length - 1]
+                  .admissionDate;
+              daysSinceLastAdmission = dayjs().diff(
+                dayjs(lastAdmission),
+                "day"
+              );
+            }
+          } else {
+            // If discharged, check discharge history
+            const patientHistory = await PatientHistory.findOne({
+              patientId: patient.patientId,
+            });
+
+            if (patientHistory) {
+              // Fetch the latest discharge date
+              const lastDischarge = patientHistory.history
+                .filter((entry) => entry.dischargeDate)
+                .sort((a, b) =>
+                  dayjs(b.dischargeDate).isBefore(a.dischargeDate) ? -1 : 1
+                )[0];
+
+              if (lastDischarge) {
+                daysSinceLastAdmission = dayjs().diff(
+                  dayjs(lastDischarge.dischargeDate),
+                  "day"
+                );
+              }
+            }
+
+            // Set discharged status to false for re-admission
+            patient.discharged = false;
+          }
+
+          // Update all patient details
+          patient.name = name;
+          patient.age = age;
+          patient.gender = gender;
+          patient.contact = contact;
+          patient.address = address;
+          patient.caste = caste;
+
+          // Add new admission record for re-admission
+          patient.admissionRecords.push({
             admissionDate: new Date(),
             reasonForAdmission,
+            weight,
             symptoms,
             initialDiagnosis,
-          },
-        ],
-      });
+          });
 
-      await patient.save();
+          // Save updated patient record
+          await patient.save();
 
-      return res.status(200).json({
-        message: `Patient ${name} added successfully with ID ${patientId}.`,
-        patientDetails: patient,
-      });
+          return res.status(200).json({
+            message: `Patient ${name} re-admitted successfully.`,
+            patientDetails: patient,
+            daysSinceLastAdmission,
+            admissionRecords: patient.admissionRecords,
+          });
+        } else {
+          return res
+            .status(404)
+            .json({ message: "Patient not found for readmission." });
+        }
+      } else {
+        // If not a readmission, create a new patient
+        const patientId = generatePatientId(name);
+
+        patient = new patientSchema({
+          patientId,
+          name,
+          age,
+          gender,
+          contact,
+          address,
+          caste,
+          admissionRecords: [
+            {
+              admissionDate: new Date(),
+              reasonForAdmission,
+              symptoms,
+              initialDiagnosis,
+              weight,
+            },
+          ],
+        });
+
+        await patient.save();
+
+        return res.status(200).json({
+          message: `Patient ${name} added successfully with ID ${patientId}.`,
+          patientDetails: patient,
+        });
+      }
     }
   } catch (error) {
     console.error("Error adding patient:", error);
@@ -354,7 +512,6 @@ export const assignDoctor = async (req, res) => {
       .json({ message: "Server error", error: error.message });
   }
 };
-
 // Controller to list all available doctors
 export const listDoctors = async (req, res) => {
   try {
@@ -382,7 +539,7 @@ export const listDoctors = async (req, res) => {
 export const listPatients = async (req, res) => {
   try {
     // Retrieve all patients from the database
-    const patients = await patientSchema.find();
+    const patients = await patientSchema.find().sort({ _id: -1 });
 
     if (!patients || patients.length === 0) {
       return res.status(404).json({ message: "No patients found." });
@@ -595,13 +752,12 @@ export const generateBillForDischargedPatient = async (req, res) => {
   try {
     const {
       patientId,
-      amountPaid = 0,
-      icsAmount = 0,
-      otherAdjustments = 0,
       bedCharges,
-      oxygenCharges,
+      procedureCharges,
       medicineCharges,
+      doctorCharges,
       investigationCharges,
+      status,
     } = req.body;
 
     if (!patientId) {
@@ -630,303 +786,360 @@ export const generateBillForDischargedPatient = async (req, res) => {
       gender,
       contact,
       weight,
+      age,
       admissionDate,
       dischargeDate,
       reasonForAdmission,
       conditionAtDischarge,
       doctor,
-      amountToBePayed,
     } = lastRecord;
 
     // Start with the pending amount from the patient schema and last admission record
-    let totalAmountDue = (patient.pendingAmount || 0) + (amountToBePayed || 0);
 
     // Calculate bed charges dynamically (if provided)
+    // Calculate bed charges dynamically
+    let totalAmountDue = 0;
+
+    // Calculate dynamic charges
+    const calculateCharges = (charges, categories, rateKey, quantityKey) => {
+      charges.total = 0;
+      categories.forEach((type) => {
+        const {
+          [rateKey]: rate,
+          [quantityKey]: quantity,
+          date,
+        } = charges[type] || {};
+        if (rate && quantity > 0 && date) {
+          const charge = rate * quantity;
+          charges.total += charge;
+          charges[type].total = charge;
+        }
+      });
+      return charges.total;
+    };
+
     if (bedCharges) {
-      const { startDate, endDate, ratePerDay } = bedCharges;
-      if (!startDate || !endDate || !ratePerDay) {
-        return res.status(400).json({
-          error:
-            "If bed charges are included, startDate, endDate, and ratePerDay are required.",
-        });
-      }
-
-      const bedDays = Math.ceil(
-        (new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24)
+      const bedCategories = ["icu", "singleAc", "singleRoom", "generalWard"];
+      totalAmountDue += calculateCharges(
+        bedCharges,
+        bedCategories,
+        "ratePerDay",
+        "quantity"
       );
-      const bedChargeAmount = bedDays * ratePerDay;
-      totalAmountDue += bedChargeAmount;
-      bedCharges.total = bedChargeAmount; // Add computed total to the response
     }
 
-    // Calculate oxygen charges (if provided)
-    if (oxygenCharges) {
-      const { quantity, ratePerUnit } = oxygenCharges;
-      if (quantity == null || ratePerUnit == null) {
-        return res.status(400).json({
-          error:
-            "If oxygen charges are included, quantity and ratePerUnit are required.",
-        });
-      }
-      const oxygenChargeAmount = quantity * ratePerUnit;
-      totalAmountDue += oxygenChargeAmount;
-      oxygenCharges.total = oxygenChargeAmount;
+    if (doctorCharges) {
+      const doctorCategories = [
+        "icuVisiting",
+        "generalVisiting",
+        "externalVisiting",
+      ];
+      totalAmountDue += calculateCharges(
+        doctorCharges,
+        doctorCategories,
+        "ratePerVisit",
+        "visits"
+      );
     }
 
-    // Calculate medicine charges (if provided)
+    if (procedureCharges) {
+      const procedureCategories = ["oxygen"];
+      totalAmountDue += calculateCharges(
+        procedureCharges,
+        procedureCategories,
+        "ratePerUnit",
+        "quantity"
+      );
+    }
+
+    if (investigationCharges) {
+      const investigationCategories = ["ecg", "xray", "ctScan", "sonography"];
+      totalAmountDue += calculateCharges(
+        investigationCharges,
+        investigationCategories,
+        "ratePerTest",
+        "quantity"
+      );
+    }
+
     if (medicineCharges) {
-      const { totalCost } = medicineCharges;
-      if (totalCost == null) {
-        return res.status(400).json({
-          error: "If medicine charges are included, totalCost is required.",
-        });
-      }
-      totalAmountDue += totalCost;
-    }
-
-    // Calculate investigation charges (if provided)
-    let totalInvestigationCharges = 0;
-    if (investigationCharges && investigationCharges.length > 0) {
-      totalInvestigationCharges = investigationCharges.reduce(
-        (total, charge) => total + (charge.amount || 0),
-        0
-      );
-      totalAmountDue += totalInvestigationCharges;
+      totalAmountDue += medicineCharges.total || 0;
     }
 
     // Apply ICS and other adjustments to the bill calculation
-    const adjustedAmount = totalAmountDue - icsAmount - otherAdjustments;
 
     // Calculate the remaining balance after payment
-    const remainingBalance = adjustedAmount - amountPaid;
 
     // Update the pending amount in the patient schema
-    patient.pendingAmount = Math.max(remainingBalance, 0); // Ensure no negative pending balance
-    patient.discharged = remainingBalance <= 0; // Mark as fully discharged if no pending amount
-    patientHistory.dischargedByReception = true;
+    lastRecord.dischargedByReception = true;
     await patientHistory.save();
     // Save the updated patient record
     await patient.save();
 
     // Prepare the final bill details
     const billDetails = {
-      patientId: patientId,
-      name: name || patient.name,
-      gender: gender || patient.gender,
-      contact: contact || patient.contact,
-      weight,
-      admissionDate,
-      dischargeDate,
-      reasonForAdmission,
-      conditionAtDischarge,
-      doctorName: doctor?.name,
-      bedCharges,
-      oxygenCharges,
-      medicineCharges,
-      investigationCharges: investigationCharges || [],
-      totalInvestigationCharges,
-      amountToBePayed: totalAmountDue,
-      icsAmount: icsAmount,
-      otherAdjustments: otherAdjustments,
-      finalAmountDue: adjustedAmount,
-      amountPaid: amountPaid,
-      remainingBalance: remainingBalance,
+      patientId: patientId || "N/A",
+      name: patient.name,
+      gender: patient.gender,
+      contact: patient.contact || "N/A",
+      weight: weight || "N/A",
+      age: patient.age || "N/A",
+      admissionDate: admissionDate || "N/A",
+      dischargeDate: dischargeDate || "N/A",
+      reasonForAdmission: reasonForAdmission || "N/A",
+      conditionAtDischarge: conditionAtDischarge || "N/A",
+      doctorName: doctor?.name || "N/A",
+      bedCharges: bedCharges || {},
+      procedureCharges: procedureCharges || {},
+      doctorCharges: doctorCharges || {},
+      investigationCharges: investigationCharges || {},
+
+      medicineCharges: medicineCharges || { totalCost: 0 },
+      totalAmountDue: totalAmountDue || 0,
+      amountPaid: status?.amountPaid || 0,
+      remainingBalance: status?.remainingBalance || 0,
       dischargeStatus: patient.discharged
         ? "Fully Discharged"
         : "Pending Balance",
+      paymentMode: status?.paymentMode || "N/A",
+      insuranceCompany: status?.insuranceCompany || "N/A",
+      conditionAtDischargePoint: status?.conditionAtDischargePoint || "N/A",
     };
 
     // HTML template for the bill
     const billHTML = `
-   <html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    .header {
-      text-align: center;
-      margin-bottom: 30px;
-      border-bottom: 2px solid #ddd;
-      padding-bottom: 20px;
-    }
-    img {
-  background-color: transparent;
-}
-
-    .header img {
-      height: 80px;
-      margin-bottom: 10px;
-    }
-    .header h1 {
-      margin: 0;
-      font-size: 24px;
-      color: #333;
-    }
-    .header p {
-      margin: 5px 0;
-      font-size: 14px;
-      color: #555;
-    }
-    .bill-details, .charges {
-      margin-top: 20px;
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .charges th, .charges td, .bill-details th, .bill-details td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-    }
-    .charges th, .bill-details th {
-      background-color: #f7f7f7;
-    }
-    .summary {
-      margin-top: 30px;
-      background-color: #f9f9f9;
-      padding: 20px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-    }
-    .summary h2 {
-      margin-top: 0;
-      font-size: 20px;
-      color: #444;
-    }
-    .summary p {
-      margin: 10px 0;
-      font-size: 16px;
-      color: #333;
-    }
-    .summary strong {
-      color: #000;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Bill</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: 12px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 20px;
+        }
+        img {
+            background-color: transparent;
+        }
+        .header img {
+            margin-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: #333;
+        }
+        .header p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #555;
+        }
+        .header-details {
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .header-details strong {
+            color: #000;
+        }
+        .patient-details {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .patient-details div {
+            width: 24%;
+            margin-bottom: 10px;
+        }
+        .patient-details div strong {
+            color: #000;
+        }
+        .charges {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .charges th, .charges td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .charges th {
+            background-color: #f7f7f7;
+            font-size: 14px;
+        }
+        .charges td {
+            font-size: 12px;
+        }
+        .charges tr:hover {
+            background-color: #f0f0f0;
+        }
+        .charges th[colspan="5"] {
+            text-align: left;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #e0e0e0;
+        }
+        .summary {
+            margin-top: 30px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+        .summary h2 {
+            margin-top: 0;
+            font-size: 18px;
+            color: #444;
+        }
+        .summary p {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #333;
+        }
+        .summary strong {
+            color: #000;
+        }
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+    </style>
 </head>
 <body>
- <div class="header">
-  <img src="https://img.freepik.com/premium-vector/blue-abstract-design-with-white-background_1123160-1669.jpg" alt="Hospital Logo" />
-  <h1>Hospital Bill</h1>
-  <table style="width: 100%; border-spacing: 0; margin-top: 10px;">
-    <tr>
-      <td><strong>Patient ID:</strong> ${billDetails.patientId}</td>
-      <td><strong>Name:</strong> ${billDetails.name || "N/A"}</td>
-      <td><strong>Age:</strong> ${billDetails.age || "N/A"}</td>
-      <td><strong>Weight:</strong> ${billDetails.weight || "N/A"}</td>
-    </tr>
-    <tr>
-      <td><strong>Gender:</strong> ${billDetails.gender || "N/A"}</td>
-      <td><strong>Caste:</strong> ${billDetails.caste || "N/A"}</td>
-      <td><strong>Contact:</strong> ${billDetails.contact || "N/A"}</td>
-      <td><strong>Doctor:</strong> ${billDetails.doctorName || "N/A"}</td>
-    </tr>
-  </table>
-</div>
-
-
-  <table class="bill-details">
-    <tr>
-      <th>Admission Date</th>
-      <td>${billDetails.admissionDate || "N/A"}</td>
-    </tr>
-    <tr>
-      <th>Discharge Date</th>
-      <td>${billDetails.dischargeDate || "N/A"}</td>
-    </tr>
-    <tr>
-      <th>Reason for Admission</th>
-      <td>${billDetails.reasonForAdmission || "N/A"}</td>
-    </tr>
-    <tr>
-      <th>Condition at Discharge</th>
-      <td>${billDetails.conditionAtDischarge || "N/A"}</td>
-    </tr>
-    <tr>
-      <th>Doctor</th>
-      <td>${billDetails.doctorName || "N/A"}</td>
-    </tr>
-  </table>
-
-  <table class="charges">
-    <tr>
-      <th>Description</th>
-      <th>Details</th>
-      <th>Amount</th>
-    </tr>
-    <tr>
-      <td>Bed Charges</td>
-      <td>
-        Start Date: ${billDetails.bedCharges.startDate || "N/A"}<br>
-        End Date: ${billDetails.bedCharges.endDate || "N/A"}<br>
-        Rate Per Day: ${billDetails.bedCharges.ratePerDay || 0}
-      </td>
-      <td>${
-        ((new Date(billDetails.bedCharges.endDate) -
-          new Date(billDetails.bedCharges.startDate)) /
-          (1000 * 60 * 60 * 24)) *
-          billDetails.bedCharges.ratePerDay || 0
-      }</td>
-    </tr>
-    <tr>
-      <td>Oxygen Charges</td>
-      <td>
-        Quantity: ${billDetails.oxygenCharges.quantity || 0}<br>
-        Rate Per Unit: ${billDetails.oxygenCharges.ratePerUnit || 0}
-      </td>
-      <td>${
-        billDetails.oxygenCharges.quantity *
-          billDetails.oxygenCharges.ratePerUnit || 0
-      }</td>
-    </tr>
-    <tr>
-      <td>Medicine Charges</td>
-      <td>Total Cost</td>
-      <td>${billDetails.medicineCharges.totalCost || 0}</td>
-    </tr>
-    ${billDetails.investigationCharges
-      .map(
-        (item) => `
-    <tr>
-      <td>Investigation</td>
-      <td>${item.description}</td>
-      <td>${item.amount}</td>
-    </tr>`
-      )
-      .join("")}
-    <tr>
-      <td>ICS Adjustment</td>
-      <td>Deduction</td>
-      <td>-${billDetails.icsAmount || 0}</td>
-    </tr>
-    <tr>
-      <td>Other Adjustments</td>
-      <td>Deduction</td>
-      <td>-${billDetails.otherAdjustments || 0}</td>
-    </tr>
-    <tr>
-      <th colspan="2">Total Amount Due</th>
-      <th>${billDetails.finalAmountDue || 0}</th>
-    </tr>
-  </table>
-
-  <div class="summary">
-    <h2>Billing Summary</h2>
-    <p><strong>Amount Paid:</strong> ${billDetails.amountPaid || 0}</p>
-    <p><strong>Remaining Balance:</strong> ${
-      billDetails.remainingBalance || 0
-    }</p>
-    <p><strong>Status:</strong> ${billDetails.dischargeStatus || "N/A"}</p>
-    <p><strong>Amount to be Paid:</strong> ${
-      billDetails.amountToBePayed || 0
-    }</p>
-  </div>
+    <div class="header">
+        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="Hospital Logo" />
+        <h1>Hospital Bill</h1>
+    </div>
+    <div class="patient-details">
+        <div><strong>Patient ID:</strong> ${
+          billDetails.patientId || "N/A"
+        }</div>
+        <div><strong>Patient Name:</strong> ${billDetails.name || "N/A"}</div>
+        <div><strong>Treating Doctor:</strong> ${
+          billDetails.doctorName || "N/A"
+        }</div>
+        <div><strong>Age:</strong> ${billDetails.age || "N/A"}</div>
+        <div><strong>Weight:</strong> ${billDetails.weight || "N/A"}</div>
+        <div><strong>Status:</strong> ${
+          billDetails.conditionAtDischarge || "N/A"
+        }</div>
+        <div><strong>Payment Mode:</strong> ${
+          billDetails.paymentMode || "N/A"
+        }</div>
+        <div><strong>Insurance Company:</strong> ${
+          billDetails.insuranceCompany || "N/A"
+        }</div>
+    </div>
+    <table class="charges">
+        <tr>
+            <th>Description</th>
+            <th>Rate per Day</th>
+            <th>Quantity</th>
+            <th>Date</th>
+            <th>Total</th>
+        </tr>
+        <tr><th colspan="5">Bed Charges Breakdown</th></tr>
+        <tr>
+            <td>ICU Bed Charges</td>
+            <td>${billDetails.bedCharges.icu.ratePerDay || 0}</td>
+            <td>${billDetails.bedCharges.icu.quantity || 0}</td>
+            <td>${billDetails.bedCharges.icu.date || "N/A"}</td>
+            <td>${billDetails.bedCharges.icu.total || 0}</td>
+        </tr>
+        <tr>
+            <td>Single AC Bed Charges</td>
+            <td>${billDetails.bedCharges.singleAc.ratePerDay || 0}</td>
+            <td>${billDetails.bedCharges.singleAc.quantity || 0}</td>
+            <td>${billDetails.bedCharges.singleAc.date || "N/A"}</td>
+            <td>${billDetails.bedCharges.singleAc.total || 0}</td>
+        </tr>
+        <tr>
+            <td>General Ward Charges</td>
+            <td>${billDetails.bedCharges.generalWard?.ratePerDay || 0}</td>
+            <td>${billDetails.bedCharges.generalWard?.quantity || 0}</td>
+            <td>${billDetails.bedCharges.generalWard?.date || "N/A"}</td>
+            <td>${billDetails.bedCharges.generalWard?.total || 0}</td>
+        </tr>
+        <tr>
+            <td colspan="4"><strong>Total Bed Charges</strong></td>
+            <td>${billDetails.bedCharges.total || 0}</td>
+        </tr>
+        <tr><th colspan="5">Procedure Charges Breakdown</th></tr>
+        <tr>
+            <td>Oxygen Procedure Charges</td>
+            <td>${billDetails.procedureCharges.oxygen?.ratePerUnit || 0}</td>
+            <td>${billDetails.procedureCharges.oxygen?.quantity || 0}</td>
+            <td>${billDetails.procedureCharges.oxygen?.date || "N/A"}</td>
+            <td>${billDetails.procedureCharges.oxygen?.total || 0}</td>
+        </tr>
+        <tr>
+            <td colspan="4"><strong>Total Procedure Charges</strong></td>
+            <td>${billDetails.procedureCharges.total || 0}</td>
+        </tr>
+        <tr><th colspan="5">Doctor Charges Breakdown</th></tr>
+        <tr>
+            <td>ICU Doctor Visits</td>
+            <td>${billDetails.doctorCharges.icuVisiting?.ratePerVisit || 0}</td>
+            <td>${billDetails.doctorCharges.icuVisiting?.visits || 0}</td>
+            <td>${billDetails.doctorCharges.icuVisiting?.date || "N/A"}</td>
+            <td>${billDetails.doctorCharges.icuVisiting?.total || 0}</td>
+        </tr>
+        <tr>
+            <td>General Doctor Visits</td>
+            <td>${billDetails.doctorCharges.generalVisiting?.rate || 0}</td>
+            <td>${billDetails.doctorCharges.generalVisiting?.quantity || 0}</td>
+            <td>${billDetails.doctorCharges.generalVisiting?.date || "N/A"}</td>
+            <td>${billDetails.doctorCharges.generalVisiting?.total || 0}</td>
+        </tr>
+        <tr>
+            <td colspan="4"><strong>Total Doctor Charges</strong></td>
+            <td>${billDetails.doctorCharges.total || 0}</td>
+        </tr>
+        <tr><th colspan="5">Investigation Charges Breakdown</th></tr>
+        <tr>
+            <td>ECG Charges</td>
+            <td>${billDetails.investigationCharges.ecg.ratePerTest || 0}</td>
+            <td>${billDetails.investigationCharges.ecg.quantity || "N/A"}</td>
+            <td>${billDetails.investigationCharges.ecg.date || "N/A"}</td>
+            <td>${billDetails.investigationCharges.ecg.total || 0}</td>
+        </tr>
+        <tr>
+            <td>X-ray Charges</td>
+            <td>${billDetails.investigationCharges.xray.ratePerTest || 0}</td>
+            <td>${billDetails.investigationCharges.xray.quantity || "N/A"}</td>
+            <td>${billDetails.investigationCharges.xray.date || "N/A"}</td>
+            <td>${billDetails.investigationCharges.xray.total || 0}</td>
+        </tr>
+        <tr>
+            <td colspan="4"><strong>Total Investigation Charges</strong></td>
+            <td>${billDetails.investigationCharges.total || 0}</td>
+        </tr>
+        <tr>
+            <td>Medicine Charges</td>
+            <td colspan="3"></td>
+            <td>${billDetails.medicineCharges.total || 0}</td>
+        </tr>
+        <tr>
+            <td colspan="4"><strong>Overall Total Amount</strong></td>
+            <td>${billDetails.totalAmountDue || 0}</td>
+        </tr>
+    </table>
 </body>
 </html>
 
-
-
-    `;
+  `;
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
@@ -976,6 +1189,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
     return res.status(500).json({ error: "Internal server error." });
   }
 };
+export const generateFeeReceipt = (req, res) => {};
 
 export const listAllPatientsWithLastRecord = async (req, res) => {
   try {
@@ -1046,5 +1260,839 @@ export const listAllPatientsWithLastRecord = async (req, res) => {
   } catch (error) {
     console.error("Error fetching patients' history:", error);
     return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+// export const getDoctorAdvice = async (req, res) => {
+//   const { patientId } = req.params;
+
+//   try {
+//     // Find the patient history by patientId
+//     const patientHistory = await PatientHistory.findOne({ patientId });
+
+//     if (!patientHistory) {
+//       return res.status(404).json({ message: "Patient history not found." });
+//     }
+
+//     // Get the latest record from the history array
+//     const latestRecord =
+//       patientHistory.history[patientHistory.history.length - 1];
+
+//     if (!latestRecord) {
+//       return res
+//         .status(404)
+//         .json({ message: "No records found for the patient." });
+//     }
+
+//     // Find the patient details from the patient schema
+//     const patient = await patientSchema.findOne({ patientId });
+
+//     if (!patient) {
+//       return res.status(404).json({ message: "Patient not found." });
+//     }
+
+//     // Extract the required details
+//     const response = {
+//       name: patient.name,
+//       weight: latestRecord.weight,
+//       age: patient.age,
+//       symptoms: latestRecord.symptomsByDoctor,
+//       vitals: latestRecord.vitals,
+//       diagnosis: latestRecord.diagnosisByDoctor,
+//       prescriptions: latestRecord.doctorPrescriptions,
+//     };
+
+//     res.status(200).json(response);
+//   } catch (error) {
+//     console.error("Error retrieving doctor advice:", error);
+//     res.status(500).json({
+//       message: "Failed to retrieve doctor advice.",
+//       error: error.message,
+//     });
+//   }
+// };
+
+export const getDoctorAdvice = async (req, res) => {
+  const { patientId } = req.params;
+
+  try {
+    // Find the patient history by patientId
+    const patientHistory = await PatientHistory.findOne({ patientId });
+
+    if (!patientHistory) {
+      return res.status(404).json({ message: "Patient history not found." });
+    }
+
+    // Get the latest record from the history array
+    const latestRecord =
+      patientHistory.history[patientHistory.history.length - 1];
+
+    if (!latestRecord) {
+      return res
+        .status(404)
+        .json({ message: "No records found for the patient." });
+    }
+
+    // Find the patient details from the patient schema
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+    // Extract the required details
+    const response = {
+      name: patient.name,
+      age: patient.age,
+      gender: patient.gender,
+      contact: patient.contact,
+      admissionDate: latestRecord.admissionDate,
+      doctor: latestRecord.doctor.name,
+      weight: latestRecord.weight,
+      age: patient.age,
+      symptoms: latestRecord.symptomsByDoctor,
+      vitals: latestRecord.vitals,
+      diagnosis: latestRecord.diagnosisByDoctor,
+      prescriptions: latestRecord.doctorPrescriptions,
+    };
+    response.prescriptions.forEach((prescription) => {
+      console.log(prescription.medicine);
+    });
+    // Generate HTML content for the PDF
+    const doctorAdviceHtml = `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff;
+            margin: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid #000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .header img {
+            width: 100%;
+            height: auto;
+        }
+
+        .details {
+            margin-bottom: 20px;
+        }
+
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .details-row p {
+            flex: 1;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .details-row p:not(:last-child) {
+            margin-right: 20px;
+        }
+
+        .section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .left, .right {
+            width: 48%;
+        }
+
+        h2 {
+            font-size: 16px;
+            margin: 10px 0;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+
+        .prescription-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .prescription-table th, .prescription-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .prescription-table th {
+            background-color: #f2f2f2;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="./saideepheader.png" alt="header">
+        </div>
+        <div class="details">
+            <div class="details-row">
+                <p><strong>Name:</strong> ${response.name}</p>
+                <p><strong>Age:</strong> ${response.age}</p>
+                <p><strong>Gender:</strong> ${response.gender}</p>
+            </div>
+            <div class="details-row">
+                <p><strong>Contact:</strong> ${response.contact}</p>
+                <p><strong>Date:</strong> ${new Date(
+                  response.admissionDate
+                ).toLocaleDateString()}</p>
+                <p><strong>Doctor:</strong> ${response.doctor}</p>
+            </div>
+            <div class="details-row">
+                <p><strong>Weight:</strong> ${response.weight} kg</p>
+                <p><strong>Height:</strong> ${response.height} cm</p>
+                <p><strong>BMI:</strong> ${response.bmi} kg/m²</p>
+            </div>
+        </div>
+        <div class="section">
+            <div class="left">
+                <h2>Vitals</h2>
+                <ul>
+                    ${response.vitals
+                      .map(
+                        (vital) => `
+                        <li>Temperature: ${vital.temperature} °C</li>
+                        <li>Pulse: ${vital.pulse} bpm</li>
+                        <li>Other: ${vital.other}</li>
+                        <li>Recorded At: ${new Date(
+                          vital.recordedAt
+                        ).toLocaleString()}</li>
+                    `
+                      )
+                      .join("")}
+                </ul>
+                <h2>Symptoms</h2>
+                <ul>
+                    ${response.symptoms
+                      .map((symptom) => `<li>${symptom}</li>`)
+                      .join("")}
+                </ul>
+                <h2>Diagnosis</h2>
+                <ul>
+                    ${response.diagnosis
+                      .map((diagnosis) => `<li>${diagnosis}</li>`)
+                      .join("")}
+                </ul>
+            </div>
+            <div class="right">
+                <h2>Prescriptions</h2>
+                <table class="prescription-table">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Dosage</th>
+                            <th>Duration</th>
+                            <th>Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${response.prescriptions
+                          .map(
+                            (prescription) => `
+                            <tr>
+                                <td>${prescription.medicine.name}</td>
+                                <td>${prescription.dosage}</td>
+                                <td>${prescription.duration}</td>
+                                <td>${prescription.frequency}</td>
+                            </tr>
+                        `
+                          )
+                          .join("")}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Dr. Santosh Raste</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
+
+    // Generate PDF from HTML
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(doctorAdviceHtml);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
+
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      keyFile: "./apikey.json", // Path to your Google service account key file
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
+
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `DoctorAdvice_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+
+    return res.status(200).json({
+      message: "Doctor advice generated successfully.",
+      fileLink: fileLink,
+    });
+  } catch (error) {
+    console.error("Error retrieving doctor advice:", error);
+    res.status(500).json({
+      message: "Failed to retrieve doctor advice.",
+      error: error.message,
+    });
+  }
+};
+export const generateFinalReceipt = async (req, res) => {
+  try {
+    const { patientId, amountPaid = 0, billingAmount = 0 } = req.params;
+
+    if (!patientId) {
+      return res.status(400).json({ error: "Patient ID is required." });
+    }
+
+    // Find the patient record
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found." });
+    }
+
+    // Fetch the patient's most recent admission history
+    const patientHistory = await PatientHistory.findOne({ patientId });
+
+    if (!patientHistory || patientHistory.history.length === 0) {
+      return res.status(404).json({ error: "Patient history not found." });
+    }
+
+    // Get the last record (most recent admission)
+    const lastRecord =
+      patientHistory.history[patientHistory.history.length - 1];
+    const { amountToBePayed } = lastRecord;
+
+    // Start with the pending amount from the patient schema and last admission record
+    let totalAmountDue =
+      (patient.pendingAmount || 0) + (amountToBePayed || 0) + billingAmount;
+
+    // Calculate the remaining balance after payment
+    const remainingBalance = totalAmountDue - amountPaid;
+
+    // Update the pending amount in the patient schema
+    patient.pendingAmount = Math.max(remainingBalance, 0); // Ensure no negative pending balance
+    patient.discharged = remainingBalance <= 0; // Mark as fully discharged if no pending amount
+
+    // Save the updated patient record
+    await patient.save();
+    const now = new Date();
+
+    const data = {
+      date: now.toISOString().split("T")[0], // Extracts the date in YYYY-MM-DD format
+      time: now.toTimeString().split(" ")[0], // Extracts the time in HH:MM:SS format
+    };
+    // Prepare the final bill details
+    const billDetails = {
+      patientId: patientId,
+      name: patient.name,
+      gender: patient.gender,
+      contact: patient.contact,
+      weight: lastRecord.weight,
+      amountToBePayed: totalAmountDue,
+      amountPaid: amountPaid,
+      billingAmount: billingAmount,
+      date: data.date,
+      time: data.time,
+
+      remainingBalance: remainingBalance,
+      dischargeStatus: patient.discharged
+        ? "Fully Discharged"
+        : "Pending Balance",
+    };
+
+    const billHTML = `
+    
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Bill Receipt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #333;
+      margin: 0 0 20px 0;
+    }
+    .details {
+      margin: 20px 0;
+      line-height: 1.6;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+    .details p {
+      flex: 1 1 30%;
+      margin: 5px 0;
+    }
+    .details strong {
+      font-weight: bold;
+    }
+    .total {
+      margin: 20px 0;
+      padding: 15px;
+      text-align: center;
+      background: #f9f9f9;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    .discharge-status {
+      text-align: center;
+      font-size: 16px;
+      margin-top: 10px;
+      color: #4caf50;
+    }
+    .discharge-status.pending {
+      color: #ff5722;
+    }
+    footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Saideep Hospital</h1>
+    <h2>Payment Receipt</h2>
+    <div class="details">
+      <p><strong>Patient ID:</strong> ${billDetails.patientId}</p>
+      <p><strong>Name:</strong> ${billDetails.name}</p>
+      <p><strong>Gender:</strong> ${billDetails.gender}</p>
+      <p><strong>Contact:</strong> ${billDetails.contact}</p>
+      <p><strong>Weight:</strong> ${billDetails.weight} kg</p>
+      <p><strong>Date:</strong> ${billDetails.date}</p>
+      <p><strong>Time:</strong> ${billDetails.time}</p>
+      <p><strong>Billing Amount:</strong> ${billDetails.billingAmount}</p>
+      <p><strong>Amount Due:</strong> ₹${billDetails.amountToBePayed}</p>
+      <p><strong>Remaining Balance:</strong> ₹${
+        billDetails.remainingBalance
+      }</p>
+    </div>
+    <div class="total">
+      Amount Paid: ₹${billDetails.amountPaid}
+    </div>
+    <div class="discharge-status ${
+      billDetails.dischargeStatus === "Pending Balance" ? "pending" : ""
+    }">
+      ${billDetails.dischargeStatus}
+    </div>
+    <footer>
+      Thank you for choosing our hospital. Please retain this receipt for future reference.
+    </footer>
+  </div>
+</body>
+</html>
+`;
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(billHTML);
+    const pdfBuffer = await page.pdf({
+      width: "8.5in", // Width of the PDF
+      height: "11in",
+    });
+    // Height of the PDF });
+    await browser.close();
+
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      credentials: ServiceAccount,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
+
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `Bill_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+    await browser.close();
+    return res.status(200).json({
+      message: "Bill generated successfully.",
+      billDetails: billDetails,
+      fileLink: fileLink,
+    });
+  } catch (error) {
+    console.error("Error generating bill:", error);
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+export const getDoctorAdvic1 = async (req, res) => {
+  const { patientId, admissionId } = req.params; // Include admissionId from request params
+
+  try {
+    // Find the patient details from the patient schema
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
+    // Find the admission record using the admissionId
+    const admissionRecord = patient.admissionRecords.find(
+      (record) => record._id.toString() === admissionId
+    );
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    // Format the response
+    const response = {
+      name: patient.name,
+      age: patient.age,
+      gender: patient.gender,
+      contact: patient.contact,
+      address: patient.address,
+      admissionDate: admissionRecord.admissionDate,
+      dischargeDate: admissionRecord.dischargeDate || null,
+      doctor: admissionRecord.doctor ? admissionRecord.doctor.name : null,
+      weight: admissionRecord.weight || null,
+      symptoms: admissionRecord.symptomsByDoctor || [],
+      vitals: admissionRecord.vitals || [],
+      diagnosis: admissionRecord.diagnosisByDoctor || [],
+      prescriptions: admissionRecord.doctorPrescriptions || [],
+    };
+
+    // Generate HTML content for the PDF
+    const doctorAdviceHtml = `
+      <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prescription</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #fff;
+            margin: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid #000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        
+        .header img {
+            width: 100%;
+            height: auto;
+        }
+        
+        .details {
+            margin-bottom: 20px;
+        }
+        
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .details-row p {
+            flex: 1;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .details-row p:not(:last-child) {
+            margin-right: 20px;
+        }
+        
+        .section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .left, .right {
+            width: 48%;
+        }
+        
+        h2 {
+            font-size: 16px;
+            margin: 10px 0;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        li {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .prescription-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .prescription-table th, .prescription-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+            font-size: 14px;
+        }
+        
+        .prescription-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="header">
+        </div>
+        <div class="details">
+            <div class="details-row">
+                <p><strong>Name:</strong> ${response.name}</p>
+                <p><strong>Age:</strong> ${response.age}</p>
+                <p><strong>Gender:</strong> ${response.gender}</p>
+            </div>
+            <div class="details-row">
+                <p><strong>Contact:</strong> ${response.contact}</p>
+                <p><strong>Date:</strong> ${new Date(
+                  response.admissionDate
+                ).toLocaleDateString()}</p>
+                <p><strong>Doctor:</strong> ${response.doctor}</p>
+            </div>
+            <div class="details-row">
+                <p><strong>Weight:</strong> ${response.weight} kg</p>
+                <p><strong>Height:</strong> ${response.height} cm</p>
+                <p><strong>BMI:</strong> ${response.bmi} kg/m²</p>
+            </div>
+        </div>
+        <div class="section">
+            <div class="left">
+                <h2>Vitals</h2>
+                <ul>
+                    ${response.vitals
+                      .map(
+                        (vital) => `
+                        <li>Temperature: ${vital.temperature} °C</li>
+                        <li>Pulse: ${vital.pulse} bpm</li>
+                        <li>Other: ${vital.other}</li>
+                        <li>Recorded At: ${new Date(
+                          vital.recordedAt
+                        ).toLocaleString()}</li>
+                    `
+                      )
+                      .join("")}
+                </ul>
+                <h2>Symptoms</h2>
+                <ul>
+                    ${response.symptoms
+                      .map((symptom) => `<li>${symptom}</li>`)
+                      .join("")}
+                </ul>
+                <h2>Diagnosis</h2>
+                <ul>
+                    ${response.diagnosis
+                      .map((diagnosis) => `<li>${diagnosis}</li>`)
+                      .join("")}
+                </ul>
+            </div>
+            <div class="right">
+                <h2>Prescriptions</h2>
+                <table class="prescription-table">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Dosage</th>
+                            <th>Comments</th>
+                            <th>Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${response.prescriptions
+                          .map(
+                            (prescription) => `
+                            <tr>
+                                <td>${prescription.medicine.name}</td>
+                                <td>
+                                    Morning: ${prescription.medicine.morning}<br>
+                                    Afternoon: ${prescription.medicine.afternoon}<br>
+                                    Evining: ${prescription.medicine.night}
+                                </td>
+                                <td>${prescription.medicine.comment}</td>
+                            </tr>
+                        `
+                          )
+                          .join("")}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="footer">
+            <p>Dr. Santosh Raste</p>
+        </div>
+    </div>
+</body>
+</html>
+      `;
+
+    // Generate PDF from HTML
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(doctorAdviceHtml);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
+
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      keyFile: "./apikey.json", // Path to your Google service account key file
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
+
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `DoctorAdvice_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+
+    return res.status(200).json({
+      message: "Doctor advice generated successfully.",
+      fileLink: fileLink,
+    });
+  } catch (error) {
+    console.error("Error retrieving doctor advice:", error);
+    res.status(500).json({
+      message: "Failed to retrieve doctor advice.",
+      error: error.message,
+    });
   }
 };

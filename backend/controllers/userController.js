@@ -5,24 +5,62 @@ import hospitalDoctors from "../models/hospitalDoctorSchema.js";
 import NonPatient from "../models/nonPatientSchema.js";
 import Nurse from "../models/nurseSchema.js";
 import twilio from "twilio";
-
+import { fileURLToPath } from "url"; // To handle __dirname in ESM
+import { google } from "googleapis";
+import fs from "fs";
+import path from "path";
+import cloudinary from "../helpers/cloudinary.js";
+import LabReport from "../models/labreportSchema.js";
+import { Readable } from "stream";
 const SECRET = "DOCTOR";
 
 export const signupDoctor = async (req, res) => {
-  const { email, password, usertype, doctorName } = req.body;
-
   try {
-    // Check if doctor exists in the database by name and type
-    // const doctor = await Doctor.findOne({ name: doctorName, type: usertype });
-    // if (!doctor) {
-    //   return res.status(404).json({ message: "Doctor not found in system." });
-    // }
+    const {
+      email,
+      password,
+      usertype,
+      doctorName,
+      speciality,
+      experience,
+      department,
+      phoneNumber,
+    } = req.body;
+    const file = req.file;
+    console.log("Uploaded file details:", file);
 
-    // Check if user with the provided email already exists
     const existingUser = await hospitalDoctors.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: "User already exists." });
     }
+    const auth = new google.auth.GoogleAuth({
+      keyFile: "./apikey.json", // Path to your Google service account key file
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert buffer to a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(file.buffer);
+    bufferStream.push(null);
+
+    // Upload file to Google Drive
+    const fileMetadata = {
+      name: file.originalname, // Use the original file name
+      parents: ["1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV"], // Replace with your shared folder ID
+    };
+    const media = {
+      mimeType: file.mimetype,
+      body: bufferStream, // Stream the buffer directly
+    };
+
+    const uploadResponse = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: "id, webViewLink",
+    });
+
+    const imageUrl = uploadResponse.data.webViewLink; // Link to the uploaded file
 
     // Hash the password and create the user
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -31,6 +69,12 @@ export const signupDoctor = async (req, res) => {
       password: hashedPassword,
       usertype,
       doctorName,
+      speciality,
+      experience,
+      department,
+      phoneNumber,
+      imageUrl,
+      // Add this field for FCM token
       // Link to doctor by name
     });
 

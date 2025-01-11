@@ -5,7 +5,10 @@ import {
   assignDoctor,
   dischargePatientByReception,
   generateBillForDischargedPatient,
+  generateFinalReceipt,
   getDischargedPatientHistory,
+  getDoctorAdvic1,
+  getDoctorAdvice,
   getDoctorsPatient,
   listAllPatientsWithLastRecord,
   listDoctors,
@@ -16,12 +19,13 @@ import {
   signupDoctor,
   signupNurse,
 } from "../controllers/userController.js";
+import upload from "../helpers/multer.js";
 
 const receiptionRouter = express.Router();
 
-receiptionRouter.post("/addDoctor", signupDoctor);
+receiptionRouter.post("/addDoctor", upload.single("image"), signupDoctor);
 receiptionRouter.post("/addNurse", signupNurse);
-receiptionRouter.post("/addPatient", addPatient);
+receiptionRouter.post("/addPatient", upload.single("image"), addPatient);
 receiptionRouter.get("/listDoctors", listDoctors);
 receiptionRouter.get("/listPatients", listPatients);
 receiptionRouter.post("/assign-Doctor", assignDoctor);
@@ -38,5 +42,14 @@ receiptionRouter.get(
   getDischargedPatientHistory
 );
 receiptionRouter.get("/getAllDischargedPatient", listAllPatientsWithLastRecord);
+receiptionRouter.get("/getDoctorAdvice/:patientId", getDoctorAdvice);
+receiptionRouter.get(
+  "/getDoctorAdvice/:patientId/:admissionId",
+  getDoctorAdvic1
+);
+receiptionRouter.get(
+  "/receipt/:patientId/:amountPaid/:billingAmount",
+  generateFinalReceipt
+);
 
 export default receiptionRouter;
