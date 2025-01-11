@@ -41,7 +41,7 @@ export const addFollowUp = async (req, res) => {
       fourhrivFluid,
     } = req.body;
     const nurseId = req.userId; // Nurse ID from authenticated user
-
+    console.log(req.body);
     // Validate user type to ensure only nurses can add follow-ups
     if (req.usertype !== "nurse") {
       return res

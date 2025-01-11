@@ -10,6 +10,7 @@ import {
   admitPatientByDoctor,
   amountToBePayed,
   askQuestion,
+  askQuestionAI,
   assignPatientToLab,
   dischargePatient,
   fetchConsultant,
@@ -68,6 +69,7 @@ doctorRouter.post("/amountToBePayed", amountToBePayed);
 doctorRouter.get("/getPatientHistory1/:patientId", getPatientHistory1);
 doctorRouter.get("/suggestions", suggestions);
 doctorRouter.post("/ask-question", askQuestion);
+doctorRouter.post("/ask-ai", askQuestionAI);
 
 // userRouter.get("/profile", auth, getUserProfile);
 // userRouter.patch("/edit-profile", auth, upload.single("image"), editProfile);
