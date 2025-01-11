@@ -7,6 +7,8 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import puppeteer from "puppeteer";
 import path from "path";
+// import fs from "fs";
+import fs from "fs/promises";
 
 export const getPatients = async (req, res) => {
   console.log(req.usertype);
@@ -412,6 +414,7 @@ export const dischargePatient = async (req, res) => {
         name: patient.name,
         gender: patient.gender,
         contact: patient.contact,
+        age: patient.age,
         history: [],
       });
     }
@@ -420,6 +423,8 @@ export const dischargePatient = async (req, res) => {
       ...followUp.toObject(), // Spread the follow-up data
       // Include additional or computed values if necessary (e.g., final observations)
     }));
+    console.log("doctorConsulting:", admissionRecord.doctorConsulting);
+
     // Append the admission record to the history, including lab reports
     patientHistory.history.push({
       admissionId,
@@ -637,6 +642,53 @@ export const fetchConsultant = async (req, res) => {
     res.status(500).json({ error: "Failed to fetch prescriptions" });
   }
 };
+
+// Suggestion endpoint
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+let data;
+
+// Load data asynchronously
+const loadData = async () => {
+  try {
+    const filePath = path.resolve(__dirname, "test.json");
+    const fileContent = await fs.readFile(filePath, "utf8");
+    data = JSON.parse(fileContent);
+    console.log(data);
+  } catch (error) {
+    console.error("Error reading or parsing test.json:", error);
+    data = null;
+  }
+};
+
+// Load data when the module is loaded
+loadData();
+
+export const suggestions = (req, res) => {
+  try {
+    const query = req.query.query.toLowerCase();
+
+    // Ensure data is defined and is an object
+    if (!data || typeof data !== "object") {
+      return res.status(500).json({ message: "Data source is not available" });
+    }
+
+    // Filter and return only the medicine names that match the query
+    const suggestions = Object.values(data).filter(
+      (item) => typeof item === "string" && item.toLowerCase().includes(query)
+    );
+
+    console.log(suggestions); // Log to verify the suggestions
+
+    res.json(suggestions); // Send suggestions as the response
+  } catch (error) {
+    console.error("Error fetching suggestions:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
 export const addPrescription = async (req, res) => {
   try {
     const { patientId, admissionId, prescription } = req.body;

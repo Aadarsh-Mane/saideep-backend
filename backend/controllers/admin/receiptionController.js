@@ -14,6 +14,7 @@ import path from "path";
 import { Readable } from "stream";
 import puppeteer from "puppeteer";
 import { response } from "express";
+import mongoose from "mongoose";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -487,7 +488,11 @@ export const assignDoctor = async (req, res) => {
     if (!admissionRecord) {
       return res.status(404).json({ message: "Admission record not found" });
     }
-
+    // if (admissionRecord.doctor && admissionRecord.doctor.id.equals(doctorId)) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "Doctor is already assigned to this patient" });
+    // }
     // Assign doctor to admission record
     admissionRecord.doctor = { id: doctorId, name: doctor.doctorName };
     await patient.save();
@@ -871,7 +876,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
     // Calculate the remaining balance after payment
 
     // Update the pending amount in the patient schema
-    lastRecord.dischargedByReception = true;
+    // lastRecord.dischargedByReception = true;
     await patientHistory.save();
     // Save the updated patient record
     await patient.save();
@@ -1032,9 +1037,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
         }</div>
         <div><strong>Age:</strong> ${billDetails.age || "N/A"}</div>
         <div><strong>Weight:</strong> ${billDetails.weight || "N/A"}</div>
-        <div><strong>Status:</strong> ${
-          billDetails.conditionAtDischarge || "N/A"
-        }</div>
+        <div><strong>Status:</strong> ${billDetails.status || "N/A"}</div>
         <div><strong>Payment Mode:</strong> ${
           billDetails.paymentMode || "N/A"
         }</div>
@@ -1074,7 +1077,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
         </tr>
         <tr>
             <td colspan="4"><strong>Total Bed Charges</strong></td>
-            <td>${billDetails.bedCharges.total || 0}</td>
+            <td><strong>${billDetails.bedCharges.total || 0}</strong></td>
         </tr>
         <tr><th colspan="5">Procedure Charges Breakdown</th></tr>
         <tr>
@@ -1086,7 +1089,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
         </tr>
         <tr>
             <td colspan="4"><strong>Total Procedure Charges</strong></td>
-            <td>${billDetails.procedureCharges.total || 0}</td>
+            <td><strong>${billDetails.procedureCharges.total || 0}</strong></td>
         </tr>
         <tr><th colspan="5">Doctor Charges Breakdown</th></tr>
         <tr>
@@ -1105,7 +1108,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
         </tr>
         <tr>
             <td colspan="4"><strong>Total Doctor Charges</strong></td>
-            <td>${billDetails.doctorCharges.total || 0}</td>
+            <td><strong>${billDetails.doctorCharges.total || 0}</strong></td>
         </tr>
         <tr><th colspan="5">Investigation Charges Breakdown</th></tr>
         <tr>
@@ -1124,16 +1127,18 @@ export const generateBillForDischargedPatient = async (req, res) => {
         </tr>
         <tr>
             <td colspan="4"><strong>Total Investigation Charges</strong></td>
-            <td>${billDetails.investigationCharges.total || 0}</td>
+            <td><strong>${
+              billDetails.investigationCharges.total || 0
+            }</strong></td>
         </tr>
         <tr>
-            <td>Medicine Charges</td>
+            <td><strong>Medicine Charges</strong></td>
             <td colspan="3"></td>
-            <td>${billDetails.medicineCharges.total || 0}</td>
+            <td><strong>${billDetails.medicineCharges.total || 0}</strong></td>
         </tr>
         <tr>
             <td colspan="4"><strong>Overall Total Amount</strong></td>
-            <td>${billDetails.totalAmountDue || 0}</td>
+            <td><strong>${billDetails.totalAmountDue || 0}</strong></td>
         </tr>
     </table>
 </body>
@@ -1194,6 +1199,18 @@ export const generateFeeReceipt = (req, res) => {};
 export const listAllPatientsWithLastRecord = async (req, res) => {
   try {
     const patientsHistory = await PatientHistory.aggregate([
+      // Filter to only include records where dischargedByReception is false
+      {
+        $addFields: {
+          history: {
+            $filter: {
+              input: "$history",
+              as: "record",
+              cond: { $eq: ["$$record.dischargedByReception", false] },
+            },
+          },
+        },
+      },
       // Sort the history array by admissionDate in descending order
       {
         $addFields: {
@@ -2094,5 +2111,380 @@ export const getDoctorAdvic1 = async (req, res) => {
       message: "Failed to retrieve doctor advice.",
       error: error.message,
     });
+  }
+};
+export const getDoctorSheet = async (req, res) => {
+  try {
+    const { patientId } = req.params; // Extract patientId from the request parameters
+
+    // Find the patient in the PatientHistory collection
+    const patientHistory = await PatientHistory.findOne({ patientId });
+    if (!patientHistory) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Get the latest admission record from the history array
+    const lastAdmission = patientHistory.history.at(-1); // Fetch the last record
+    if (!lastAdmission) {
+      return res
+        .status(404)
+        .json({ message: "No admission records found for the patient" });
+    }
+
+    // Get the latest consulting record from the doctorConsulting array in the latest admission
+    const lastConsulting = lastAdmission.doctorConsulting.at(-1); // Fetch the last consulting record
+    if (!lastConsulting) {
+      return res.status(404).json({
+        message: "No consulting records found for the latest admission",
+      });
+    }
+    // Format the response
+    const response = {
+      patientId: patientHistory.patientId,
+      name: patientHistory.name,
+      age: patientHistory.age,
+      gender: patientHistory.gender,
+      contact: patientHistory.contact || null,
+      address: patientHistory.address || null,
+      admissionDate: lastAdmission.admissionDate,
+      dischargeDate: lastAdmission.dischargeDate || null,
+      doctor: lastAdmission.doctor?.name || null,
+      allergies: lastConsulting.allergies || null,
+      cheifComplaint: lastConsulting.cheifComplaint || null,
+      describeAllergies: lastConsulting.describeAllergies || null,
+      historyOfPresentIllness: lastConsulting.historyOfPresentIllness || null,
+      personalHabits: lastConsulting.personalHabits || null,
+      familyHistory: lastConsulting.familyHistory || null,
+      menstrualHistory: lastConsulting.menstrualHistory || null,
+      wongBaker: lastConsulting.wongBaker || null,
+      visualAnalogue: lastConsulting.visualAnalogue || null,
+      relevantPreviousInvestigations:
+        lastConsulting.relevantPreviousInvestigations || null,
+      immunizationHistory: lastConsulting.immunizationHistory || null,
+      pastMedicalHistory: lastConsulting.pastMedicalHistory || null,
+    };
+    const DoctorHTML = `
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Initial Assessment Sheet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin-top: 0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f4f4f4;
+            flex-direction: column;
+        }
+        .container {
+            width: 210mm;
+            height: auto;
+            padding: 15mm;
+            padding-top: 0;
+            box-sizing: border-box;
+            border: 1px solid #000;
+            background-color: #fff;
+            margin-bottom: 2mm;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 5px;
+        }
+        .header h1 {
+            margin: 5px 0;
+            font-size: 24px;
+        }
+        .header p {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        .section {
+            margin-bottom: 20px;
+        }
+        .section h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        .field-table {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        .field-table td {
+            padding: 5px 10px;
+            vertical-align: top;
+        }
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .checkbox-group input {
+            margin-right: 10px;
+        }
+        .textarea {
+            width: 100%;
+            height: 100px;
+            box-sizing: border-box;
+            border: 1px solid #000;
+            padding: 5px;
+            margin-bottom: 20px;
+        }
+        .pain-scale img {
+            width: 100%;
+            max-width: 600px;
+        }
+        .header img {
+            padding-top: 10px;
+        }
+        .pain-scale {
+            width: 100%;
+        }
+        .pain-scale .scale {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .pain-scale .scale span {
+            font-weight: bold;
+            margin-right: 10px;
+        }
+        .pain-scale .progress-bar {
+            flex-grow: 1;
+            height: 20px;
+            background-color: #ddd;
+            border-radius: 5px;
+            position: relative;
+        }
+        .pain-scale .progress-bar::after {
+            content: "";
+            position: absolute;
+            height: 100%;
+            background-color: #f00;
+            border-radius: 5px;
+            transition: width 0.3s ease;
+        }
+        .pain-scale .wong-baker {
+            width: 100%;
+        }
+        .pain-scale .visual-analogue {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" id="page-1">
+        <div class="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="header">
+            <h3>DOCTOR INITIAL ASSESSMENT SHEET</h3>
+        </div>
+        <div class="section">
+            <table class="field-table">
+                <tr>
+                    <td><strong>Patient id.:</strong> <span id="patientid">${
+                      response.patientId
+                    }</span></td>
+                    <td><strong>Patient Name:</strong> <span id="patientName">${
+                      response.name
+                    }</span></td>
+                </tr>
+                <tr>
+                    <td><strong>Age:</strong> <span id="age">${
+                      response.age
+                    }</span></td>
+                    <td><strong>Sex:</strong> <span id="sex">${
+                      response.gender
+                    }</span></td>
+                    <td><strong>Date:</strong> <span id="date">${
+                      response.admissionDate
+                    }</span></td>
+                </tr>
+                <tr>
+                    <td colspan="3"><strong>Name of Consultant:</strong> <span id="consultant">${
+                      response.doctor || "N/A"
+                    }</span></td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h3>Known Allergies</h3>
+            <div class="checkbox-group">
+                <strong>Allergies:</strong><span id="allergies">${
+                  response.allergies || "N/A"
+                }</span>
+            </div>
+            <div class="field">
+                <span>Describe:</span> <div id="describe" class="textarea">${
+                  response.describeAllergies || "N/A"
+                }</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Chief Complaint</h3>
+            <div id="chiefComplaint" class="textarea">${
+              response.cheifComplaint || "N/A"
+            }</div>
+        </div>
+
+        <div class="section">
+            <h3>History of Present Illness</h3>
+            <div id="historyIllness" class="textarea">${
+              response.historyOfPresentIllness || "N/A"
+            }</div>
+        </div>
+
+        <div class="section">
+            <h3>Personal Habits:</h3>
+            <div class="checkbox-group">
+                <span id="personalHabits">${
+                  response.personalHabits || "N/A"
+                }</span>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Immunization History (if relevant):</h3>
+            <div id="immunization" class="textarea">${
+              response.immunizationHistory || "N/A"
+            }</div>
+        </div><br><br>
+        <div class="section">
+            <h3>Past History</h3>
+            <div id="pastHistory" class="textarea">${
+              response.pastMedicalHistory || "N/A"
+            }</div>
+        </div>
+
+        <div class="section">
+            <h3>Family History</h3>
+            <div id="familyHistory" class="textarea">${
+              response.menstrualHistory || "N/A"
+            }</div>
+        </div>
+        <div class="section">
+            <h3>Relevant Previous Investigations Report</h3>
+            <div id="previousInvestigations" class="textarea">${
+              response.relevantPreviousInvestigations || "N/A"
+            }</div>
+        </div>
+
+        <div class="section">
+            <h3>Menstrual History</h3><br>
+            <span id="menstrualHistory">${
+              response.menstrualHistory || "N/A"
+            }</span>
+        </div>
+
+        <div class="section pain-scale"> 
+            <h3>Pain Scale</h3> 
+            <div class="scale wong-baker">  
+                <strong>Wong-Baker:</strong><span id="wongBaker" >${
+                  response.wongBaker || "N/A"
+                }</span> 
+            </div> 
+        </div> 
+        <div class="scale visual-analogue"> 
+            <strong>0-10 Visual Analogue:</strong><span id="visualAnalogue">${
+              response.visualAnalogue || "N/A"
+            }</span>     
+                </div> 
+            </div> 
+        </div> 
+    </div>
+</div>
+</body>
+</html>
+    `;
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(DoctorHTML);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
+
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      credentials: ServiceAccount,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
+
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `Bill_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+    await browser.close();
+
+    return res.status(200).json({
+      message: "Bill generated successfully.",
+      response: response,
+      fileLink: fileLink,
+    });
+  } catch (err) {
+    console.error("Error fetching doctor consulting:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+};
+
+export const dischargeByReception = async (req, res) => {
+  const { patientId, admissionId } = req.params;
+
+  try {
+    // Find the patient history document by patientId
+    const patientHistory = await PatientHistory.findOne({ patientId });
+
+    if (!patientHistory) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record within the history array
+    const admission = patientHistory.history.find(
+      (record) => record.admissionId.toString() === admissionId
+    );
+
+    if (!admission) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Update dischargedByReception to true
+    admission.dischargedByReception = true;
+
+    // Save the updated patient history document
+    await patientHistory.save();
+
+    return res.status(200).json({
+      message: "Discharged by reception updated successfully",
+      patientHistory,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };

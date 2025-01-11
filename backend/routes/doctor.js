@@ -25,6 +25,7 @@ import {
   getPatientHistory1,
   getPatients,
   getPatientsAssignedByDoctor,
+  suggestions,
   updateConditionAtDischarge,
 } from "../controllers/doctorController.js";
 import { auth } from "../middleware/auth.js";
@@ -64,6 +65,7 @@ doctorRouter.get(
 );
 doctorRouter.post("/amountToBePayed", amountToBePayed);
 doctorRouter.get("/getPatientHistory1/:patientId", getPatientHistory1);
+doctorRouter.get("/suggestions", suggestions);
 
 // userRouter.get("/profile", auth, getUserProfile);
 // userRouter.patch("/edit-profile", auth, upload.single("image"), editProfile);

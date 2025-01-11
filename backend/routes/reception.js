@@ -3,12 +3,14 @@ import {
   acceptAppointment,
   addPatient,
   assignDoctor,
+  dischargeByReception,
   dischargePatientByReception,
   generateBillForDischargedPatient,
   generateFinalReceipt,
   getDischargedPatientHistory,
   getDoctorAdvic1,
   getDoctorAdvice,
+  getDoctorSheet,
   getDoctorsPatient,
   listAllPatientsWithLastRecord,
   listDoctors,
@@ -50,6 +52,11 @@ receiptionRouter.get(
 receiptionRouter.get(
   "/receipt/:patientId/:amountPaid/:billingAmount",
   generateFinalReceipt
+);
+receiptionRouter.get("/doctorSheet/:patientId", getDoctorSheet);
+receiptionRouter.put(
+  "/dischargeByReceptionCondition/:patientId/:admissionId",
+  dischargeByReception
 );
 
 export default receiptionRouter;

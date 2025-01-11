@@ -60,7 +60,7 @@ const patientHistorySchema = new mongoose.Schema({
   name: { type: String, required: true }, // Redundant for easier history tracking
   gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
   contact: { type: String }, // Optional for history purposes
-
+  age: { type: String },
   // Historical records
   history: [
     {
