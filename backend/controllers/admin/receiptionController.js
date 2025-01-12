@@ -1029,22 +1029,39 @@ export const generateBillForDischargedPatient = async (req, res) => {
         <h1>Hospital Bill</h1>
     </div>
     <div class="patient-details">
-        <div><strong>Patient ID:</strong> ${
-          billDetails.patientId || "N/A"
-        }</div>
-        <div><strong>Patient Name:</strong> ${billDetails.name || "N/A"}</div>
-        <div><strong>Treating Doctor:</strong> ${
-          billDetails.doctorName || "N/A"
-        }</div>
-        <div><strong>Age:</strong> ${billDetails.age || "N/A"}</div>
-        <div><strong>Weight:</strong> ${billDetails.weight || "N/A"}</div>
-        <div><strong>Status:</strong> ${billDetails.status || "N/A"}</div>
-        <div><strong>Payment Mode:</strong> ${
-          billDetails.paymentMode || "N/A"
-        }</div>
-        <div><strong>Insurance Company:</strong> ${
-          billDetails.insuranceCompany || "N/A"
-        }</div>
+        <tr>
+            <td class="bold"><strong>Patient ID:</strong> <span id="patientId">${
+              billDetails.patientId || "N/A"
+            }</span></td>
+            <td class="bold"><strong>Patient Name:</strong> <span id="name">${
+              billDetails.name || "N/A"
+            }</span></td>
+        </tr>
+        <tr>
+            <td class="bold"><strong>Treating Doctor:</strong> <span id="doctorName">${
+              billDetails.doctorName || "N/A"
+            }</span></td>
+            <td class="bold"><strong>Age:</strong> <span id="age">${
+              billDetails.age || "N/A"
+            }</span></td>
+        </tr>
+        <tr>
+            <td class="bold"><strong>Weight:</strong> <span id="weight">${
+              billDetails.weight || "N/A"
+            }</span></td>
+            <td class="bold"><strong>Status:</strong> <span id="status">${
+              billDetails.status || "N/A"
+            }</span></td>
+        </tr>
+        <tr>
+            <td class="bold"><strong>Payment Mode:</strong> <span id="paymentMode">${
+              billDetails.paymentMode || "N/A"
+            }</span></td>
+            <td class="bold"><strong>Insurance Company:</strong> <span id="insuranceCompany">${
+              billDetails.insuranceCompany || "N/A"
+            }</span></td>
+        </tr>
+        
     </div>
     <table class="charges">
         <tr>
