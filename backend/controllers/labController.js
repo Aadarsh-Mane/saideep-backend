@@ -95,7 +95,7 @@ export const generateReportPdfForPatient = async (req, res) => {
 
     // Authenticate with Google Drive
     const auth = new google.auth.GoogleAuth({
-      keyFile: "./apikey.json", // Path to your Google service account key file
+      credentials: ServiceAccount,
       scopes: ["https://www.googleapis.com/auth/drive"],
     });
     const drive = google.drive({ version: "v3", auth });

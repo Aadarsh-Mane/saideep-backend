@@ -34,7 +34,7 @@ export const signupDoctor = async (req, res) => {
       return res.status(400).json({ message: "User already exists." });
     }
     const auth = new google.auth.GoogleAuth({
-      keyFile: "./apikey.json", // Path to your Google service account key file
+      credentials: ServiceAccount,
       scopes: ["https://www.googleapis.com/auth/drive"],
     });
     const drive = google.drive({ version: "v3", auth });
