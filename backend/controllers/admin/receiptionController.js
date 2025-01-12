@@ -2078,7 +2078,8 @@ export const getDoctorAdvic1 = async (req, res) => {
 
         // Authenticate with Google Drive API
         const auth = new google.auth.GoogleAuth({
-          keyFile: "./apikey.json", // Path to your Google service account key file
+          credentials: ServiceAccount,
+          // keyFile: "./apikey.json", // Path to your Google service account key file
           scopes: ["https://www.googleapis.com/auth/drive"],
         });
         const drive = google.drive({ version: "v3", auth });
