@@ -15,6 +15,7 @@ import { Readable } from "stream";
 import puppeteer from "puppeteer";
 import { response } from "express";
 import mongoose from "mongoose";
+import pdf from "html-pdf";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -1832,6 +1833,7 @@ export const generateFinalReceipt = async (req, res) => {
     return res.status(500).json({ error: "Internal server error." });
   }
 };
+
 export const getDoctorAdvic1 = async (req, res) => {
   const { patientId, admissionId } = req.params; // Include admissionId from request params
 
@@ -1872,246 +1874,256 @@ export const getDoctorAdvic1 = async (req, res) => {
     // Generate HTML content for the PDF
     const doctorAdviceHtml = `
       <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Prescription</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #fff;
-            margin: 20px;
-        }
-        
-        .container {
-            width: 100%;
-            max-width: 800px;
-            margin: 0 auto;
-            border: 1px solid #000;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        
-        .header img {
-            width: 100%;
-            height: auto;
-        }
-        
-        .details {
-            margin-bottom: 20px;
-        }
-        
-        .details-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 10px;
-        }
-        
-        .details-row p {
-            flex: 1;
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        
-        .details-row p:not(:last-child) {
-            margin-right: 20px;
-        }
-        
-        .section {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-        }
-        
-        .left, .right {
-            width: 48%;
-        }
-        
-        h2 {
-            font-size: 16px;
-            margin: 10px 0;
-            border-bottom: 1px solid #000;
-            padding-bottom: 5px;
-        }
-        
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        
-        li {
-            margin: 5px 0;
-            font-size: 14px;
-        }
-        
-        .prescription-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 20px;
-        }
-        
-        .prescription-table th, .prescription-table td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
-            font-size: 14px;
-        }
-        
-        .prescription-table th {
-            background-color: #f2f2f2;
-        }
-        
-        .footer {
-            text-align: center;
-            font-size: 14px;
-            margin-top: 20px;
-        }
-        
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="header">
-        </div>
-        <div class="details">
-            <div class="details-row">
-                <p><strong>Name:</strong> ${response.name}</p>
-                <p><strong>Age:</strong> ${response.age}</p>
-                <p><strong>Gender:</strong> ${response.gender}</p>
-            </div>
-            <div class="details-row">
-                <p><strong>Contact:</strong> ${response.contact}</p>
-                <p><strong>Date:</strong> ${new Date(
-                  response.admissionDate
-                ).toLocaleDateString()}</p>
-                <p><strong>Doctor:</strong> ${response.doctor}</p>
-            </div>
-            <div class="details-row">
-                <p><strong>Weight:</strong> ${response.weight} kg</p>
-                <p><strong>Height:</strong> ${response.height} cm</p>
-                <p><strong>BMI:</strong> ${response.bmi} kg/m²</p>
-            </div>
-        </div>
-        <div class="section">
-            <div class="left">
-                <h2>Vitals</h2>
-                <ul>
-                    ${response.vitals
-                      .map(
-                        (vital) => `
-                        <li>Temperature: ${vital.temperature} °C</li>
-                        <li>Pulse: ${vital.pulse} bpm</li>
-                        <li>Other: ${vital.other}</li>
-                        <li>Recorded At: ${new Date(
-                          vital.recordedAt
-                        ).toLocaleString()}</li>
-                    `
-                      )
-                      .join("")}
-                </ul>
-                <h2>Symptoms</h2>
-                <ul>
-                    ${response.symptoms
-                      .map((symptom) => `<li>${symptom}</li>`)
-                      .join("")}
-                </ul>
-                <h2>Diagnosis</h2>
-                <ul>
-                    ${response.diagnosis
-                      .map((diagnosis) => `<li>${diagnosis}</li>`)
-                      .join("")}
-                </ul>
-            </div>
-            <div class="right">
-                <h2>Prescriptions</h2>
-                <table class="prescription-table">
-                    <thead>
-                        <tr>
-                            <th>Medicine</th>
-                            <th>Dosage</th>
-                            <th>Comments</th>
-                            <th>Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${response.prescriptions
-                          .map(
-                            (prescription) => `
-                            <tr>
-                                <td>${prescription.medicine.name}</td>
-                                <td>
-                                    Morning: ${prescription.medicine.morning}<br>
-                                    Afternoon: ${prescription.medicine.afternoon}<br>
-                                    Evining: ${prescription.medicine.night}
-                                </td>
-                                <td>${prescription.medicine.comment}</td>
-                            </tr>
-                        `
-                          )
-                          .join("")}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="footer">
-            <p>Dr. Santosh Raste</p>
-        </div>
-    </div>
-</body>
-</html>
-      `;
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Prescription</title>
+          <style>
+              body {
+                  font-family: Arial, sans-serif;
+                  background-color: #fff;
+                  margin: 20px;
+              }
+              
+              .container {
+                  width: 100%;
+                  max-width: 800px;
+                  margin: 0 auto;
+                  border: 1px solid #000;
+                  padding: 20px;
+                  box-sizing: border-box;
+              }
+              
+              .header img {
+                  width: 100%;
+                  height: auto;
+              }
+              
+              .details {
+                  margin-bottom: 20px;
+              }
+              
+              .details-row {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 10px;
+              }
+              
+              .details-row p {
+                  flex: 1;
+                  margin: 5px 0;
+                  font-size: 14px;
+              }
+              
+              .details-row p:not(:last-child) {
+                  margin-right: 20px;
+              }
+              
+              .section {
+                  display: flex;
+                  justify-content: space-between;
+                  margin-bottom: 20px;
+              }
+              
+              .left, .right {
+                  width: 48%;
+              }
+              
+              h2 {
+                  font-size: 16px;
+                  margin: 10px 0;
+                  border-bottom: 1px solid #000;
+                  padding-bottom: 5px;
+              }
+              
+              ul {
+                  list-style-type: none;
+                  padding: 0;
+              }
+              
+              li {
+                  margin: 5px 0;
+                  font-size: 14px;
+              }
+              
+              .prescription-table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  margin-bottom: 20px;
+              }
+              
+              .prescription-table th, .prescription-table td {
+                  border: 1px solid #000;
+                  padding: 8px;
+                  text-align: left;
+                  font-size: 14px;
+              }
+              
+              .prescription-table th {
+                  background-color: #f2f2f2;
+              }
+              
+              .footer {
+                  text-align: center;
+                  font-size: 14px;
+                  margin-top: 20px;
+              }
+              
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="header">
+                  <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="header">
+              </div>
+              <div class="details">
+                  <div class="details-row">
+                      <p><strong>Name:</strong> ${response.name}</p>
+                      <p><strong>Age:</strong> ${response.age}</p>
+                      <p><strong>Gender:</strong> ${response.gender}</p>
+                  </div>
+                  <div class="details-row">
+                      <p><strong>Contact:</strong> ${response.contact}</p>
+                      <p><strong>Date:</strong> ${new Date(
+                        response.admissionDate
+                      ).toLocaleDateString()}</p>
+                      <p><strong>Doctor:</strong> ${response.doctor}</p>
+                  </div>
+                  <div class="details-row">
+                      <p><strong>Weight:</strong> ${response.weight} kg</p>
+                      <p><strong>Height:</strong> ${response.height} cm</p>
+                      <p><strong>BMI:</strong> ${response.bmi} kg/m²</p>
+                  </div>
+              </div>
+              <div class="section">
+                  <div class="left">
+                      <h2>Vitals</h2>
+                      <ul>
+                          ${response.vitals
+                            .map(
+                              (vital) => `
+                              <li>Temperature: ${vital.temperature} °C</li>
+                              <li>Pulse: ${vital.pulse} bpm</li>
+                              <li>Other: ${vital.other}</li>
+                              <li>Recorded At: ${new Date(
+                                vital.recordedAt
+                              ).toLocaleString()}</li>
+                          `
+                            )
+                            .join("")}
+                      </ul>
+                      <h2>Symptoms</h2>
+                      <ul>
+                          ${response.symptoms
+                            .map((symptom) => `<li>${symptom}</li>`)
+                            .join("")}
+                      </ul>
+                      <h2>Diagnosis</h2>
+                      <ul>
+                          ${response.diagnosis
+                            .map((diagnosis) => `<li>${diagnosis}</li>`)
+                            .join("")}
+                      </ul>
+                  </div>∂
+                  <div class="right">
+                      <h2>Prescriptions</h2>
+                      <table class="prescription-table">
+                          <thead>
+                              <tr>
+                                  <th>Medicine</th>
+                                  <th>Dosage</th>
+                                  <th>Comments</th>
+                                  <th>Price</th>
+                              </tr>
+                          </thead>
+                          <tbody>
+                              ${response.prescriptions
+                                .map(
+                                  (prescription) => `
+                                  <tr>
+                                      <td>${prescription.medicine.name}</td>
+                                      <td>
+                                          Morning: ${prescription.medicine.morning}<br>
+                                          Afternoon: ${prescription.medicine.afternoon}<br>
+                                          Evening: ${prescription.medicine.night}
+                                      </td>
+                                      <td>${prescription.medicine.comment}</td>
+                                  </tr>
+                              `
+                                )
+                                .join("")}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+              <div class="footer">
+                  <p>Dr. Santosh Raste</p>
+              </div>
+          </div>
+      </body>
+      </html>
+    `;
 
     // Generate PDF from HTML
-    const browser = await puppeteer.launch();
-    const page = await browser.newPage();
-    await page.setContent(doctorAdviceHtml);
-    const pdfBuffer = await page.pdf({ format: "A4" });
-    await browser.close();
+    pdf
+      .create(doctorAdviceHtml, { format: "A4" })
+      .toBuffer(async (err, pdfBuffer) => {
+        if (err) {
+          return res.status(500).json({
+            message: "Failed to generate PDF",
+            error: err.message,
+          });
+        }
 
-    // Authenticate with Google Drive API
-    const auth = new google.auth.GoogleAuth({
-      credentials: ServiceAccount,
+        // Authenticate with Google Drive API
+        const auth = new google.auth.GoogleAuth({
+          keyFile: "./apikey.json", // Path to your Google service account key file
+          scopes: ["https://www.googleapis.com/auth/drive"],
+        });
+        const drive = google.drive({ version: "v3", auth });
 
-      scopes: ["https://www.googleapis.com/auth/drive"],
-    });
-    const drive = google.drive({ version: "v3", auth });
+        // Convert PDF buffer into a readable stream
+        const bufferStream = new Readable();
+        bufferStream.push(pdfBuffer);
+        bufferStream.push(null);
 
-    // Convert PDF buffer into a readable stream
-    const bufferStream = new Readable();
-    bufferStream.push(pdfBuffer);
-    bufferStream.push(null);
+        // Folder ID in Google Drive
+        const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
 
-    // Folder ID in Google Drive
-    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+        // Upload PDF to Google Drive
+        try {
+          const driveFile = await drive.files.create({
+            resource: {
+              name: `DoctorAdvice_${patientId}.pdf`,
+              parents: [folderId],
+            },
+            media: {
+              mimeType: "application/pdf",
+              body: bufferStream,
+            },
+            fields: "id, webViewLink",
+          });
 
-    // Upload PDF to Google Drive
-    const driveFile = await drive.files.create({
-      resource: {
-        name: `DoctorAdvice_${patientId}.pdf`,
-        parents: [folderId],
-      },
-      media: {
-        mimeType: "application/pdf",
-        body: bufferStream,
-      },
-      fields: "id, webViewLink",
-    });
+          // Extract file's public link
+          const fileLink = driveFile.data.webViewLink;
 
-    // Extract file's public link
-    const fileLink = driveFile.data.webViewLink;
-
-    return res.status(200).json({
-      message: "Doctor advice generated successfully.",
-      fileLink: fileLink,
-    });
+          return res.status(200).json({
+            message: "Doctor advice generated successfully.",
+            fileLink: fileLink,
+          });
+        } catch (error) {
+          return res.status(500).json({
+            message: "Failed to upload PDF to Google Drive",
+            error: error.message,
+          });
+        }
+      });
   } catch (error) {
-    console.error("Error retrieving doctor advice:", error);
-    res.status(500).json({
-      message: "Failed to retrieve doctor advice.",
-      error: error.message,
-    });
+    console.error("Error generating doctor advice:", error);
+    return res
+      .status(500)
+      .json({ message: "Server error", error: error.message });
   }
 };
 export const getDoctorSheet = async (req, res) => {
