@@ -6,12 +6,14 @@ import {
   dischargeByReception,
   dischargePatientByReception,
   generateBillForDischargedPatient,
+  generateDeclaration,
   generateFinalReceipt,
   getDischargedPatientHistory,
   getDoctorAdvic1,
   getDoctorAdvice,
   getDoctorSheet,
   getDoctorsPatient,
+  getLastRecordWithFollowUps,
   listAllPatientsWithLastRecord,
   listDoctors,
   listPatients,
@@ -53,10 +55,15 @@ receiptionRouter.get(
   "/receipt/:patientId/:amountPaid/:billingAmount",
   generateFinalReceipt
 );
+receiptionRouter.get("/declaration", generateDeclaration);
 receiptionRouter.get("/doctorSheet/:patientId", getDoctorSheet);
 receiptionRouter.put(
   "/dischargeByReceptionCondition/:patientId/:admissionId",
   dischargeByReception
+);
+receiptionRouter.get(
+  "/getLastFollowUps/:patientId",
+  getLastRecordWithFollowUps
 );
 
 export default receiptionRouter;
