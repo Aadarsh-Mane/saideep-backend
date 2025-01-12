@@ -1830,7 +1830,7 @@ export const generateFinalReceipt = async (req, res) => {
 
       // Extract file's public link
       const fileLink = driveFile.data.webViewLink;
-      await browser.close();
+      // await browser.close();
       return res.status(200).json({
         message: "Bill generated successfully.",
         billDetails: billDetails,
@@ -2457,7 +2457,7 @@ export const getDoctorSheet = async (req, res) => {
 
         // Extract file's public link
         const fileLink = driveFile.data.webViewLink;
-        await browser.close();
+        // await browser.close();
 
         return res.status(200).json({
           message: "Bill generated successfully.",
