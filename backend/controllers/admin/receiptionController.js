@@ -2080,62 +2080,66 @@ export const getDoctorAdvic1 = async (req, res) => {
 </body>
 </html>
     `;
-
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.setContent(doctorAdviceHtml);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
     // Generate PDF from HTML
-    pdf
-      .create(doctorAdviceHtml, { format: "A4" })
-      .toBuffer(async (err, pdfBuffer) => {
-        if (err) {
-          return res.status(500).json({
-            message: "Failed to generate PDF",
-            error: err.message,
-          });
-        }
+    // pdf
+    //   .create(doctorAdviceHtml, { format: "A4" })
+    //   .toBuffer(async (err, pdfBuffer) => {
+    //     if (err) {
+    //       return res.status(500).json({
+    //         message: "Failed to generate PDF",
+    //         error: err.message,
+    //       });
+    //     }
 
-        // Authenticate with Google Drive API
-        const auth = new google.auth.GoogleAuth({
-          credentials: ServiceAccount,
-          // keyFile: "./apikey.json", // Path to your Google service account key file
-          scopes: ["https://www.googleapis.com/auth/drive"],
-        });
-        const drive = google.drive({ version: "v3", auth });
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      credentials: ServiceAccount,
+      // keyFile: "./apikey.json", // Path to your Google service account key file
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
 
-        // Convert PDF buffer into a readable stream
-        const bufferStream = new Readable();
-        bufferStream.push(pdfBuffer);
-        bufferStream.push(null);
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
 
-        // Folder ID in Google Drive
-        const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
 
-        // Upload PDF to Google Drive
-        try {
-          const driveFile = await drive.files.create({
-            resource: {
-              name: `DoctorAdvice_${patientId}.pdf`,
-              parents: [folderId],
-            },
-            media: {
-              mimeType: "application/pdf",
-              body: bufferStream,
-            },
-            fields: "id, webViewLink",
-          });
-
-          // Extract file's public link
-          const fileLink = driveFile.data.webViewLink;
-
-          return res.status(200).json({
-            message: "Doctor advice generated successfully.",
-            fileLink: fileLink,
-          });
-        } catch (error) {
-          return res.status(500).json({
-            message: "Failed to upload PDF to Google Drive",
-            error: error.message,
-          });
-        }
+    // Upload PDF to Google Drive
+    try {
+      const driveFile = await drive.files.create({
+        resource: {
+          name: `DoctorAdvice_${patientId}.pdf`,
+          parents: [folderId],
+        },
+        media: {
+          mimeType: "application/pdf",
+          body: bufferStream,
+        },
+        fields: "id, webViewLink",
       });
+
+      // Extract file's public link
+      const fileLink = driveFile.data.webViewLink;
+
+      return res.status(200).json({
+        message: "Doctor advice generated successfully.",
+        fileLink: fileLink,
+      });
+    } catch (error) {
+      return res.status(500).json({
+        message: "Failed to upload PDF to Google Drive",
+        error: error.message,
+      });
+    }
+    // });
   } catch (error) {
     console.error("Error generating doctor advice:", error);
     return res
