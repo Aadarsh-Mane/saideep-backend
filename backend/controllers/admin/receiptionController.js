@@ -1215,7 +1215,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
     // });
   } catch (error) {
     console.error("Error generating bill:", error);
-    return res.status(500).json({ error: "Internal server error." });
+    return res.status(500).json({ error: error });
   }
 };
 export const generateFeeReceipt = (req, res) => {};
