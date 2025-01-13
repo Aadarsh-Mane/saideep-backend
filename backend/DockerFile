@@ -1,13 +1,23 @@
-FROM docker pull ghcr.io/puppeteer/puppeteer:23.10.1 # pulls the image that contains Puppeteer v16.1.0
+FROM ghcr.io/puppeteer/puppeteer:23.10.1  # Pulls the image that contains Puppeteer v16.1.0
 
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+# Install Chromium and required dependencies
+RUN apt-get update && apt-get install -y \
+    chromium-browser \
+    libnss3 \
+    libx11-dev \
+    fonts-liberation \
+    libappindicator3-1 \
+    xdg-utils \
+    libasound2
 
+# Set the executable path for Puppeteer to use
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 WORKDIR /usr/src/app
 
 COPY package.json ./
 RUN npm ci 
-COPY
-CMD
-CMD ["node" ,"index.js"]
+
+COPY . .
+
+CMD ["node", "index.js"]
