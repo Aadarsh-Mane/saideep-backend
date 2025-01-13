@@ -10,7 +10,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 WORKDIR /usr/src/app
 RUN which chromium || echo "Chromium not found"
 
-COPY package.json ./
+COPY package.json package-lock.json ./
 RUN npm ci 
 
 COPY . .
