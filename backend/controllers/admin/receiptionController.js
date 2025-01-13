@@ -16,7 +16,8 @@ import puppeteer from "puppeteer";
 import { response } from "express";
 import mongoose from "mongoose";
 import pdf from "html-pdf";
-
+import dotenv from "dotenv";
+dotenv.config(); // Load environment variables from .env file
 dayjs.extend(utc);
 dayjs.extend(timezone);
 // export const addPatient = async (req, res) => {
@@ -2080,7 +2081,15 @@ export const getDoctorAdvic1 = async (req, res) => {
 </body>
 </html>
     `;
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      args: [
+        "--disable-setuid-sandbox",
+        "--no-sandbox",
+        "--single-process",
+        "--no-zygote",
+      ],
+      executablePath: "/usr/bin/google-chrome-stable",
+    });
     const page = await browser.newPage();
     await page.setContent(doctorAdviceHtml);
     const pdfBuffer = await page.pdf({ format: "A4" });
