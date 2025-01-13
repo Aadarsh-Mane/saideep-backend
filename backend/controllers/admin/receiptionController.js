@@ -2088,7 +2088,7 @@ export const getDoctorAdvic1 = async (req, res) => {
         "--single-process",
         "--no-zygote",
       ],
-      executablePath: "/usr/bin/google-chrome-stable",
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     });
     const page = await browser.newPage();
     await page.setContent(doctorAdviceHtml);
