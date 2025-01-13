@@ -2090,6 +2090,7 @@ export const getDoctorAdvic1 = async (req, res) => {
       ],
       executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
     });
+    console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
     const page = await browser.newPage();
     await page.setContent(doctorAdviceHtml);
     const pdfBuffer = await page.pdf({ format: "A4" });
