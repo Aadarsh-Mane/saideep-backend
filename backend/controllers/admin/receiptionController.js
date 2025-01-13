@@ -2088,7 +2088,9 @@ export const getDoctorAdvic1 = async (req, res) => {
         "--single-process",
         "--no-zygote",
       ],
-      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH,
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        "/usr/bin/google-chrome-stable",
     });
     console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
     const page = await browser.newPage();
