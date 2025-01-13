@@ -1,11 +1,11 @@
-FROM ghcr.io/puppeteer/puppeteer:23.10.1  # Pulls the image that contains Puppeteer v16.1.0
-
-# Install Chromium and required dependencies
-RUN apt-get update && apt-get install -y chromium
+FROM ghcr.io/puppeteer/puppeteer:23.10.1 
 
 
-# Set the executable path for Puppeteer to use
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
+# Set the executable path for Puppeteer to used
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 WORKDIR /usr/src/app
 RUN which chromium || echo "Chromium not found"
