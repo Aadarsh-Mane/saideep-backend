@@ -1646,7 +1646,7 @@ export const getDoctorAdvice = async (req, res) => {
 export const generateFinalReceipt = async (req, res) => {
   try {
     const { patientId, amountPaid = 0, billingAmount = 0 } = req.params;
-
+    console.log("thi os ", patientId, amountPaid, billingAmount);
     if (!patientId) {
       return res.status(400).json({ error: "Patient ID is required." });
     }
@@ -1672,7 +1672,9 @@ export const generateFinalReceipt = async (req, res) => {
 
     // Start with the pending amount from the patient schema and last admission record
     let totalAmountDue =
-      (patient.pendingAmount || 0) + (amountToBePayed || 0) + billingAmount;
+      (parseFloat(patient.pendingAmount) || 0) +
+      (parseFloat(amountToBePayed) || 0) +
+      (parseFloat(billingAmount) || 0);
 
     // Calculate the remaining balance after payment
     const remainingBalance = totalAmountDue - amountPaid;
@@ -1743,12 +1745,13 @@ export const generateFinalReceipt = async (req, res) => {
       flex-wrap: wrap;
       justify-content: space-between;
     }
-    .details p {
-      flex: 1 1 30%;
-      margin: 5px 0;
+    table {
+      width: 100%;
+      border-collapse: collapse;
     }
-    .details strong {
-      font-weight: bold;
+    td {
+      padding: 8px;
+      border: none;
     }
     .total {
       margin: 20px 0;
@@ -1775,6 +1778,22 @@ export const generateFinalReceipt = async (req, res) => {
       font-weight: bold;
       color: #333;
     }
+    @media screen and (max-width: 600px) {
+      .container {
+        padding: 10px;
+      }
+      table, tr, td {
+        display: block;
+        width: 100%;
+      }
+      td {
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+      }
+      td:last-child {
+        border-bottom: none;
+      }
+    }
   </style>
 </head>
 <body>
@@ -1782,18 +1801,25 @@ export const generateFinalReceipt = async (req, res) => {
     <h1>Saideep Hospital</h1>
     <h2>Payment Receipt</h2>
     <div class="details">
-      <p><strong>Patient ID:</strong> ${billDetails.patientId}</p>
-      <p><strong>Name:</strong> ${billDetails.name}</p>
-      <p><strong>Gender:</strong> ${billDetails.gender}</p>
-      <p><strong>Contact:</strong> ${billDetails.contact}</p>
-      <p><strong>Weight:</strong> ${billDetails.weight} kg</p>
-      <p><strong>Date:</strong> ${billDetails.date}</p>
-      <p><strong>Time:</strong> ${billDetails.time}</p>
-      <p><strong>Billing Amount:</strong> ${billDetails.billingAmount}</p>
-      <p><strong>Amount Due:</strong> ₹${billDetails.amountToBePayed}</p>
-      <p><strong>Remaining Balance:</strong> ₹${
-        billDetails.remainingBalance
-      }</p>
+      <table>
+        <tr>
+          <td><strong>Patient ID:</strong> ${billDetails.patientId}</td>
+          <td><strong>Name:</strong> ${billDetails.name}</td>
+          <td><strong>Gender:</strong> ${billDetails.gender}</td>
+        </tr>
+        <tr>
+          <td><strong>Contact:</strong> ${billDetails.contact}</td>
+          <td><strong>Weight:</strong> ${billDetails.weight} kg</td>
+          <td><strong>Date:</strong> ${billDetails.date}</td>
+        </tr>
+        <tr>
+          <td><strong>Time:</strong> ${billDetails.time}</td>
+          <td><strong>Amount Due:</strong> ₹${billDetails.amountToBePayed}</td>
+          <td><strong>Remaining Balance:</strong> ₹${
+            billDetails.remainingBalance
+          }</td>
+        </tr>
+      </table>
     </div>
     <div class="total">
       Amount Paid: ₹${billDetails.amountPaid}
@@ -1810,51 +1836,67 @@ export const generateFinalReceipt = async (req, res) => {
 </body>
 </html>
 `;
-    pdf.create(billHTML, { format: "A4" }).toBuffer(async (err, pdfBuffer) => {
-      if (err) {
-        return res.status(500).json({
-          message: "Failed to generate PDF",
-          error: err.message,
-        });
-      }
-
-      // Authenticate with Google Drive API
-      const auth = new google.auth.GoogleAuth({
-        credentials: ServiceAccount,
-        scopes: ["https://www.googleapis.com/auth/drive"],
-      });
-      const drive = google.drive({ version: "v3", auth });
-
-      // Convert PDF buffer into a readable stream
-      const bufferStream = new Readable();
-      bufferStream.push(pdfBuffer);
-      bufferStream.push(null);
-
-      // Folder ID in Google Drive
-      const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
-
-      // Upload PDF to Google Drive
-      const driveFile = await drive.files.create({
-        resource: {
-          name: `Bill_${patientId}.pdf`,
-          parents: [folderId],
-        },
-        media: {
-          mimeType: "application/pdf",
-          body: bufferStream,
-        },
-        fields: "id, webViewLink",
-      });
-
-      // Extract file's public link
-      const fileLink = driveFile.data.webViewLink;
-      // await browser.close();
-      return res.status(200).json({
-        message: "Bill generated successfully.",
-        billDetails: billDetails,
-        fileLink: fileLink,
-      });
+    // pdf.create(billHTML, { format: "A4" }).toBuffer(async (err, pdfBuffer) => {
+    //   if (err) {
+    //     return res.status(500).json({
+    //       message: "Failed to generate PDF",
+    //       error: err.message,
+    //     });
+    //   }
+    const browser = await puppeteer.launch({
+      args: [
+        "--disable-setuid-sandbox",
+        "--no-sandbox",
+        "--single-process",
+        "--no-zygote",
+      ],
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        "/usr/bin/google-chrome-stable",
     });
+    console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
+    const page = await browser.newPage();
+    await page.setContent(billHTML);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
+
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      credentials: ServiceAccount,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
+
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `Bill_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+    // await browser.close();
+    return res.status(200).json({
+      message: "Bill generated successfully.",
+      billDetails: billDetails,
+      fileLink: fileLink,
+    });
+    // });
   } catch (error) {
     console.error("Error generating bill:", error);
     return res.status(500).json({ error: "Internal server error." });

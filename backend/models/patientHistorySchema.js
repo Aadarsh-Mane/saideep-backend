@@ -132,6 +132,9 @@ const patientHistorySchema = new mongoose.Schema({
         {
           temperature: { type: Number },
           pulse: { type: Number },
+          bloodPressure: { type: Number },
+          bloodSugarLevel: { type: Number },
+
           other: { type: String },
           recordedAt: { type: Date, default: Date.now },
         },

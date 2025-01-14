@@ -14,6 +14,7 @@ import { auth } from "./middleware/auth.js";
 import { Server } from "socket.io";
 import http from "http";
 import { socketHandler } from "./socketHandler.js";
+import fs from "fs";
 const port = 3000;
 
 const app = express();
@@ -137,7 +138,30 @@ app.post("/check-location", (req, res) => {
 });
 app.post("/storeFcmToken", auth, getFcmToken);
 socketHandler(server);
+let medicines = {};
+fs.readFile("./test.json", "utf8", (err, data) => {
+  if (err) {
+    console.error("Error reading JSON file:", err);
+    return;
+  }
+  medicines = JSON.parse(data);
+});
 
+// Endpoint for search suggestions
+app.get("/search", (req, res) => {
+  const query = req.query.q?.toLowerCase(); // Get the query parameter
+
+  if (!query) {
+    return res.status(400).json({ error: "Query parameter is required" });
+  }
+
+  // Filter medicines based on query
+  const suggestions = Object.values(medicines).filter((medicine) =>
+    medicine.toLowerCase().includes(query)
+  );
+
+  res.json({ suggestions });
+});
 server.listen(port, "0.0.0.0", () => {
   console.log(`Server is running on port http://localhost:${port}`);
 });

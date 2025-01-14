@@ -401,7 +401,8 @@ export const dischargePatient = async (req, res) => {
 
     // Save the updated patient document
     await patient.save();
-
+    const updatedPatient = await patientSchema.findOne({ patientId });
+    console.log("Final discharged status in DB:", updatedPatient.discharged);
     // Fetch lab reports for this admission
     const labReports = await LabReport.find({ admissionId }).exec();
 
