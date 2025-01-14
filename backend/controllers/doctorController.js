@@ -326,8 +326,11 @@ export const getPatientsAssignedByDoctor = async (req, res) => {
   const doctorId = req.userId; // Get the doctorId from the request's user (assuming you're using authentication)
 
   try {
-    // Fetch lab reports where the doctorId matches the logged-in doctor
-    const labReports = await LabReport.find({ doctorId })
+    // Fetch lab reports where the doctorId matches the logged-in doctor and patientId is not null
+    const labReports = await LabReport.find({
+      doctorId,
+      patientId: { $ne: null },
+    }) // Filter out records with null patientId
       .populate({
         path: "patientId",
         select: "name age gender contact", // Select specific fields from the Patient schema
