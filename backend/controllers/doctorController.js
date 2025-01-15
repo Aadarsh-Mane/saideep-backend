@@ -1251,3 +1251,38 @@ export const askQuestionAI = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+export const deletedPrescription = async (req, res) => {
+  // app.delete("/prescriptions/:id", async (req, res) => {
+  // app.delete("/doctors/deletePrescription/:patientId/:admissionId/:prescriptionId", async (req, res) => {
+  const { patientId, admissionId, prescriptionId } = req.params;
+
+  try {
+    // Find the patient and remove the prescription from the specific admission record
+    const updatedPatient = await patientSchema.findOneAndUpdate(
+      {
+        patientId: patientId,
+        "admissionRecords._id": admissionId, // Match the admission record
+      },
+      {
+        $pull: {
+          "admissionRecords.$.doctorPrescriptions": { _id: prescriptionId },
+        }, // Remove the prescription
+      },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedPatient) {
+      return res.status(404).json({
+        message: "Patient, admission record, or prescription not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Prescription deleted successfully",
+      updatedPatient,
+    });
+  } catch (error) {
+    console.error("Error deleting prescription:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};

@@ -12,6 +12,7 @@ import {
   askQuestion,
   askQuestionAI,
   assignPatientToLab,
+  deletedPrescription,
   dischargePatient,
   fetchConsultant,
   fetchDiagnosis,
@@ -61,6 +62,11 @@ doctorRouter.post("/addDiagnosis", addDiagnosisByDoctor);
 doctorRouter.post("/addDoctorConsultant", addDoctorConsultant);
 doctorRouter.get("/fetchDiagnosis/:patientId/:admissionId", fetchDiagnosis);
 doctorRouter.post("/updateCondition", auth, updateConditionAtDischarge);
+doctorRouter.delete(
+  "/deletePrescription/:patientId/:admissionId/:prescriptionId",
+  deletedPrescription
+);
+
 doctorRouter.get(
   "/doctorConsulting/:patientId/:admissionId",
   getDoctorConsulting
