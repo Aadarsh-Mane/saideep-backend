@@ -1173,7 +1173,17 @@ export const generateBillForDischargedPatient = async (req, res) => {
     //       error: err.message,
     //     });
     //   }
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      args: [
+        "--disable-setuid-sandbox",
+        "--no-sandbox",
+        "--single-process",
+        "--no-zygote",
+      ],
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        "/usr/bin/google-chrome-stable",
+    });
     const page = await browser.newPage();
     await page.setContent(billHTML);
     const pdfBuffer = await page.pdf({ format: "A4" });
@@ -2909,15 +2919,15 @@ export const generateOpdBill = async (req, res) => {
 
 `;
     const browser = await puppeteer.launch({
-      // args: [
-      //   "--disable-setuid-sandbox",
-      //   "--no-sandbox",
-      //   "--single-process",
-      //   "--no-zygote",
-      // ],
-      // executablePath:
-      //   process.env.PUPPETEER_EXECUTABLE_PATH ||
-      //   "/usr/bin/google-chrome-stable",
+      args: [
+        "--disable-setuid-sandbox",
+        "--no-sandbox",
+        "--single-process",
+        "--no-zygote",
+      ],
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        "/usr/bin/google-chrome-stable",
     });
     // console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
     const page = await browser.newPage();
@@ -3159,15 +3169,15 @@ export const generateOpdReceipt = async (req, res) => {
 
 `;
     const browser = await puppeteer.launch({
-      // args: [
-      //   "--disable-setuid-sandbox",
-      //   "--no-sandbox",
-      //   "--single-process",
-      //   "--no-zygote",
-      // ],
-      // executablePath:
-      //   process.env.PUPPETEER_EXECUTABLE_PATH ||
-      //   "/usr/bin/google-chrome-stable",
+      args: [
+        "--disable-setuid-sandbox",
+        "--no-sandbox",
+        "--single-process",
+        "--no-zygote",
+      ],
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        "/usr/bin/google-chrome-stable",
     });
     // console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
     const page = await browser.newPage();
@@ -3415,15 +3425,15 @@ export const generateaIpddReceipt = async (req, res) => {
 
 `;
     const browser = await puppeteer.launch({
-      // args: [
-      //   "--disable-setuid-sandbox",
-      //   "--no-sandbox",
-      //   "--single-process",
-      //   "--no-zygote",
-      // ],
-      // executablePath:
-      //   process.env.PUPPETEER_EXECUTABLE_PATH ||
-      //   "/usr/bin/google-chrome-stable",
+      args: [
+        "--disable-setuid-sandbox",
+        "--no-sandbox",
+        "--single-process",
+        "--no-zygote",
+      ],
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        "/usr/bin/google-chrome-stable",
     });
     // console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
     const page = await browser.newPage();
