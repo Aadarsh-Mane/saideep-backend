@@ -17,9 +17,11 @@ import { response } from "express";
 import mongoose from "mongoose";
 import pdf from "html-pdf";
 import dotenv from "dotenv";
+import moment from "moment";
 dotenv.config(); // Load environment variables from .env file
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
 // export const addPatient = async (req, res) => {
 //   const {
 //     name,
@@ -1968,34 +1970,77 @@ export const getDoctorAdvic1 = async (req, res) => {
             width: 100%;
             height: auto;
         }
-
-        table {
+        
+        .details {
+            margin-bottom: 20px;
+        }
+        
+        .details-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .details-row p {
+            flex: 1;
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .details-row p:not(:last-child) {
+            margin-right: 20px;
+        }
+        
+        .section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .left, .right {
+            width: 48%;
+        }
+        
+        h2 {
+            font-size: 16px;
+            margin: 10px 0;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+        
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        
+        li {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+        
+        .prescription-table {
             width: 100%;
             border-collapse: collapse;
             margin-bottom: 20px;
         }
-
-        th, td {
+        
+        .prescription-table th, .prescription-table td {
             border: 1px solid #000;
-            padding: 4px;  /* Reduced padding for compact height */
+            padding: 8px;
             text-align: left;
             font-size: 14px;
         }
-
-        th {
+        
+        .prescription-table th {
             background-color: #f2f2f2;
         }
-
-        .details-table td {
-            border: none;
-        }
-
+        
         .footer {
             text-align: center;
             font-size: 14px;
             margin-top: 20px;
         }
-
+        
     </style>
 </head>
 <body>
@@ -2003,136 +2048,97 @@ export const getDoctorAdvic1 = async (req, res) => {
         <div class="header">
             <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="header">
         </div>
-        <table class="details-table">
-            <tr>
-                <td><strong>Name:</strong> ${response.name}</td>
-                <td><strong>Age:</strong> ${response.age}</td>
-                <td><strong>Gender:</strong> ${response.gender}</td>
-                <td><strong>Contact:</strong> ${response.contact}</td>
-            </tr>
-            <tr>
-                <td><strong>Date:</strong> ${new Date(
+        <div class="details">
+            <div class="details-row">
+                <p><strong>Name:</strong> ${response.name}</p>
+                <p><strong>Age:</strong> ${response.age}</p>
+                <p><strong>Gender:</strong> ${response.gender}</p>
+            </div>
+            <div class="details-row">
+             <p><strong>Weight:</strong> ${response.weight} kg</p>
+
+                <p><strong>Date:</strong> ${new Date(
                   response.admissionDate
-                ).toLocaleDateString()}</td>
-                <td><strong>Doctor:</strong> ${response.doctor}</td>
-                <td><strong>Weight:</strong> ${response.weight} kg</td>
-                <td><strong>Height:</strong> ${response.height} cm</td>
-            </tr>
-            <tr>
-                <td><strong>BMI:</strong> ${response.bmi} kg/m²</td>
-                <td colspan="3"></td>
-            </tr>
-        </table>
-        <table>
-            <thead>
-                <tr>
-                    <th>Section</th>
-                    <th>Details</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Vitals</td>
-                    <td>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Temperature</th>
-                                    <th>Pulse</th>
-                                    <th>Other</th>
-                                    <th>Recorded At</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${response.vitals
-                                  .map(
-                                    (vital) => `
-                                <tr>
-                                    <td>${vital.temperature} °C</td>
-                                    <td>${vital.pulse} bpm</td>
-                                    <td>${vital.other}</td>
-                                    <td>${new Date(
-                                      vital.recordedAt
-                                    ).toLocaleString()}</td>
-                                </tr>
-                                `
-                                  )
-                                  .join("")}
-                            </tbody>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Symptoms</td>
-                    <td>
-                        <table>
-                            <tbody>
-                                ${response.symptoms
-                                  .map(
-                                    (symptom) => `<tr><td>${symptom}</td></tr>`
-                                  )
-                                  .join("")}
-                            </tbody>
-                        </table>
-                    </td>
-                </tr>
-                <tr>
-                    <td>Diagnosis</td>
-                    <td>
-                        <table>
-                            <tbody>
-                                ${response.diagnosis
-                                  .map(
-                                    (diagnosis) =>
-                                      `<tr><td>${diagnosis}</td></tr>`
-                                  )
-                                  .join("")}
-                            </tbody>
-                        </table>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <h2>Prescriptions</h2>
-        <table class="prescription-table">
-            <thead>
-                <tr>
-                    <th>Medicine</th>
-                    <th>Dosage</th>
-                    <th>Comments</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${response.prescriptions
-                  .map(
-                    (prescription) => `
-                <tr>
-                    <td>${prescription.medicine.name}</td>
-                    <td>M: ${prescription.medicine.morning} / A: ${prescription.medicine.afternoon} / N: ${prescription.medicine.night}</td>
-                    <td>${prescription.frequency}</td>
-                </tr>
-                `
-                  )
-                  .join("")}
-            </tbody>
-        </table>
+                ).toLocaleDateString()}</p>
+                <p><strong>Doctor:</strong> ${response.doctor}</p>
+            </div>
+
+        </div>
+        <div class="section">
+            <div class="left">
+                <h2>Vitals</h2>
+                <ul>
+                    ${response.vitals
+                      .map(
+                        (vital) => `
+                        <li>Temperature: ${vital.temperature} °C</li>
+                        <li>Pulse: ${vital.pulse} bpm</li>
+                        <li>BP: ${vital.bloodPressure}</li>
+                        <li>BSL: ${vital.bloodSugarLevel}</li>
+                        <li>Other: ${vital.other}</li>
+                        <li>Recorded At: ${new Date(
+                          vital.recordedAt
+                        ).toLocaleString()}</li>
+                    `
+                      )
+                      .join("")}
+                </ul>
+                <h2>Symptoms</h2>
+                <ul>
+                    ${response.symptoms
+                      .map((symptom) => `<li>${symptom}</li>`)
+                      .join("")}
+                </ul>
+                <h2>Diagnosis</h2>
+                <ul>
+                    ${response.diagnosis
+                      .map((diagnosis) => `<li>${diagnosis}</li>`)
+                      .join("")}
+                </ul>
+            </div>
+            <div class="right">
+                <h2>Prescriptions</h2>
+                <table class="prescription-table">
+                    <thead>
+                        <tr>
+                            <th>Medicine</th>
+                            <th>Dosage</th>
+                            <th>Comments</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${response.prescriptions
+                          .map(
+                            (prescription) => `
+                        <tr>
+                            <td>${prescription.medicine.name}</td>
+                            <td>M: ${prescription.medicine.morning} / A: ${prescription.medicine.afternoon} / N: ${prescription.medicine.night}</td>
+                            <td>${prescription.frequency}</td>
+                        </tr>
+                        `
+                          )
+                          .join("")}
+                    </tbody>
+                </table>
+            </div>
+        </div>
         <div class="footer">
-            <p>Dr. Santosh Raste</p>
+            <p>20s Developers</p>
         </div>
     </div>
 </body>
 </html>
     `;
     const browser = await puppeteer.launch({
-      args: [
-        "--disable-setuid-sandbox",
-        "--no-sandbox",
-        "--single-process",
-        "--no-zygote",
-      ],
-      executablePath:
-        process.env.PUPPETEER_EXECUTABLE_PATH ||
-        "/usr/bin/google-chrome-stable",
+      // args: [
+      //   "--disable-setuid-sandbox",
+      //   "--no-sandbox",
+      //   "--single-process",
+      //   "--no-zygote",
+      // ],
+      // executablePath:
+      //   process.env.PUPPETEER_EXECUTABLE_PATH ||
+      //   "/usr/bin/google-chrome-stable",
     });
     console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
     const page = await browser.newPage();
@@ -2492,54 +2498,60 @@ export const getDoctorSheet = async (req, res) => {
 </body>
 </html>
     `;
-    pdf
-      .create(DoctorHTML, { format: "A4" })
-      .toBuffer(async (err, pdfBuffer) => {
-        if (err) {
-          return res.status(500).json({
-            message: "Failed to generate PDF",
-            error: err.message,
-          });
-        }
+    const browser = await puppeteer.launch({
+      args: [
+        "--disable-setuid-sandbox",
+        "--no-sandbox",
+        "--single-process",
+        "--no-zygote",
+      ],
+      executablePath:
+        process.env.PUPPETEER_EXECUTABLE_PATH ||
+        "/usr/bin/google-chrome-stable",
+    });
+    console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
+    const page = await browser.newPage();
+    await page.setContent(DoctorHTML);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
 
-        // Authenticate with Google Drive API
-        const auth = new google.auth.GoogleAuth({
-          credentials: ServiceAccount,
-          scopes: ["https://www.googleapis.com/auth/drive"],
-        });
-        const drive = google.drive({ version: "v3", auth });
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      credentials: ServiceAccount,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
 
-        // Convert PDF buffer into a readable stream
-        const bufferStream = new Readable();
-        bufferStream.push(pdfBuffer);
-        bufferStream.push(null);
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
 
-        // Folder ID in Google Drive
-        const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
 
-        // Upload PDF to Google Drive
-        const driveFile = await drive.files.create({
-          resource: {
-            name: `Bill_${patientId}.pdf`,
-            parents: [folderId],
-          },
-          media: {
-            mimeType: "application/pdf",
-            body: bufferStream,
-          },
-          fields: "id, webViewLink",
-        });
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `Bill_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
 
-        // Extract file's public link
-        const fileLink = driveFile.data.webViewLink;
-        // await browser.close();
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+    // await browser.close();
 
-        return res.status(200).json({
-          message: "Bill generated successfully.",
-          response: response,
-          fileLink: fileLink,
-        });
-      });
+    return res.status(200).json({
+      message: "Bill generated successfully.",
+      response: response,
+      fileLink: fileLink,
+    });
   } catch (err) {
     console.error("Error fetching doctor consulting:", err);
     return res.status(500).json({ error: "Internal server error" });
@@ -2626,5 +2638,847 @@ export const getLastRecordWithFollowUps = async (req, res) => {
     res
       .status(500)
       .json({ message: "Internal server error", error: error.message });
+  }
+};
+// Import necessary modules (e.g., your database model if needed)
+export const generateOpdBill = async (req, res) => {
+  try {
+    // Extract patient history, lab charges, other charges, and dates from the request body
+    const { patientId, labCharges, otherCharges, labDate, otherChargesDate } =
+      req.body;
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ error: "Patient not found." });
+    }
+    const patientHistory = await PatientHistory.findOne({ patientId });
+
+    // Ensure all required fields are provided
+    // if (!labCharges || !otherCharges || !labDate || !otherChargesDate) {
+    //   return res.status(400).json({
+    //     message:
+    //       "All fields (patientHistory, labCharges, otherCharges, labDate, otherChargesDate) are required.",
+    //   });
+    // }
+    function cleanDate(rawDate) {
+      // Using moment to parse the date and remove the timezone and GMT
+      const cleanedDate = moment(rawDate).format("YYYY-MM-DD HH:mm:ss");
+      return cleanedDate;
+    }
+
+    // Retrieve the last record from the patient's history
+    const lastRecord =
+      patientHistory.history[patientHistory.history.length - 1];
+    const { amountToBePayed } = lastRecord;
+    const {
+      name,
+      gender,
+      contact,
+      weight,
+      age,
+      admissionDate,
+      dischargeDate,
+      reasonForAdmission,
+      conditionAtDischarge,
+      doctor,
+    } = lastRecord;
+    const cleanedAdmissionDate = cleanDate(admissionDate);
+    const cleanedDischargeDate = cleanDate(dischargeDate);
+    // Calculate the new total amount by including lab charges and other charges
+    // const totalAmount = amountToBePayed + labCharges + otherCharges;
+    const totalAmount =
+      amountToBePayed + (labCharges?.amount || 0) + (otherCharges?.amount || 0);
+    const now = new Date();
+    const data = {
+      date: now.toISOString().split("T")[0], // Extracts the date in YYYY-MM-DD format
+      time: now.toTimeString().split(" ")[0], // Extracts the time in HH:MM:SS format
+    };
+    const billDetails = {
+      patientId: patientId,
+      name: patient.name,
+      gender: patient.gender,
+      contact: patient.contact,
+      weight: weight,
+      age: patient.age,
+      admissionDate: cleanedAdmissionDate,
+      dischargeDate: cleanedDischargeDate,
+      reasonForAdmission: reasonForAdmission,
+      conditionAtDischarge: conditionAtDischarge,
+      doctor: doctor.name,
+      labCharges: labCharges,
+      otherCharges: otherCharges,
+      labDate: labDate,
+      date: data.date,
+      time: data.time,
+      amountToBePayed: amountToBePayed,
+      otherChargesDate: otherChargesDate,
+      totalAmount: totalAmount,
+    };
+    const billHTML = ` <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hospital Bill</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            font-size: 12px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 20px;
+        }
+        img {
+            background-color: transparent;
+        }
+        .header img {
+            margin-bottom: 10px;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+            color: #333;
+        }
+        .header p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #555;
+        }
+        .header-details {
+            margin: 20px 0;
+            font-size: 14px;
+            line-height: 1.8;
+        }
+        .header-details strong {
+            color: #000;
+        }
+        .patient-details {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            display: flex;
+            flex-wrap: wrap;
+        }
+        .patient-details div {
+            width: 50%;
+            margin-bottom: 10px;
+        }
+        .patient-details div strong {
+            color: #000;
+        }
+        .charges {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .charges th, .charges td {
+            border: 1px solid #ddd;
+            padding: 8px 12px;
+            text-align: left;
+        }
+        .charges th {
+            background-color: #f7f7f7;
+            font-size: 14px;
+        }
+        .charges td {
+            font-size: 12px;
+        }
+        .charges tr:hover {
+            background-color: #f0f0f0;
+        }
+        .charges th[colspan="5"] {
+            text-align: left;
+            font-size: 14px;
+            font-weight: bold;
+            background-color: #e0e0e0;
+        }
+        .summary {
+            margin-top: 30px;
+            background-color: #f9f9f9;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+        }
+        .summary h2 {
+            margin-top: 0;
+            font-size: 18px;
+            color: #444;
+        }
+        .summary p {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #333;
+        }
+        .summary strong {
+            color: #000;
+        }
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="Hospital Logo" />
+        <h1>Hospital Bill</h1>
+    </div>
+    <div class="patient-details">
+        <div><strong>Patient ID:</strong> <span id="patientId">${
+          billDetails.patientId || "N/A"
+        }</span></div>
+        <div><strong>Patient Name:</strong> <span id="name">${
+          billDetails.name || "N/A"
+        }</span></div>
+        <div><strong>Gender:</strong> <span id="gender">${
+          billDetails.gender || "N/A"
+        }</span></div>
+        <div><strong>Contact:</strong> <span id="contact">${
+          billDetails.contact || "N/A"
+        }</span></div>
+        <div><strong>Weight:</strong> <span id="weight">${
+          billDetails.weight || "N/A"
+        }</span></div>
+        <div><strong>Age:</strong> <span id="age">${
+          billDetails.age || "N/A"
+        }</span></div>
+        <div><strong>Admission Date:</strong> <span id="admissionDate">${
+          billDetails.admissionDate || "N/A"
+        }</span></div>
+        <div><strong>Discharge Date:</strong> <span id="dischargeDate">${
+          billDetails.dischargeDate || "N/A"
+        }</span></div>
+        <div><strong>Reason for Admission:</strong> <span id="reasonForAdmission">${
+          billDetails.reasonForAdmission || "N/A"
+        }</span></div>
+        <div><strong>Condition at Discharge:</strong> <span id="conditionAtDischarge">${
+          billDetails.conditionAtDischarge || "N/A"
+        }</span></div>
+        <div><strong>Doctor:</strong> <span id="doctor">${
+          billDetails.doctor || "N/A"
+        }</span></div>
+      
+        <div>
+  <strong>Date & Time:</strong> 
+  <span id="dateTime">
+    ${billDetails.date ? billDetails.date : "N/A"} ${
+      billDetails.time ? billDetails.time : ""
+    }
+  </span>
+</div>
+
+    </div>
+    <table class="charges">
+        <tr>
+            <th>Description</th>
+            <th>Charges</th>
+            <th>Date</th>
+            <th>Total</th>
+        </tr>
+        <tr>
+            <td>Lab Charges</td>
+            <td>${billDetails.labCharges.amount || 0}</td>
+            <td>${billDetails.labCharges.date || "N/A"}</td>
+            <td>${billDetails.labCharges.amount || 0}</td>
+        </tr>
+        <tr>
+            <td>Other Charges</td>
+            <td>${billDetails.otherCharges.amount || 0}</td>
+            <td>${billDetails.otherCharges.date || "N/A"}</td>
+            <td>${billDetails.otherCharges.amount || 0}</td>
+        </tr>
+        <tr>
+            <td><strong>Doctor Charges</strong></td>
+            <td colspan="2"></td>
+            <td><strong>${billDetails.amountToBePayed || 0}</strong></td>
+        </tr>
+        <tr>
+            <td><strong>Total Amount</strong></td>
+            <td colspan="2"></td>
+            <td><strong>${billDetails.totalAmount || 0}</strong></td>
+        </tr>
+    </table>
+</body>
+</html>
+
+
+`;
+    const browser = await puppeteer.launch({
+      // args: [
+      //   "--disable-setuid-sandbox",
+      //   "--no-sandbox",
+      //   "--single-process",
+      //   "--no-zygote",
+      // ],
+      // executablePath:
+      //   process.env.PUPPETEER_EXECUTABLE_PATH ||
+      //   "/usr/bin/google-chrome-stable",
+    });
+    // console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
+    const page = await browser.newPage();
+    await page.setContent(billHTML);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
+
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      credentials: ServiceAccount,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
+
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `Bill_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+    // Send the generated OPD bill in the response
+    return res.status(200).json({
+      message: "OPD bill generated successfully",
+      fileLink: fileLink,
+    });
+  } catch (error) {
+    // Handle errors
+    console.error("Error generating OPD bill:", error);
+    return res.status(500).json({
+      message: "An error occurred while generating the OPD bill.",
+      error: error.message,
+    });
+  }
+};
+
+export const generateOpdReceipt = async (req, res) => {
+  try {
+    const { patientId, billingAmount, amountPaid } = req.body;
+
+    // Ensure required fields are present
+    if (!patientId || billingAmount == null || amountPaid == null) {
+      return res.status(400).json({
+        message: "Patient ID, billing amount, and amount paid are required.",
+      });
+    }
+
+    // Find the patient
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
+    // Fetch the patient's most recent admission history
+    const patientHistory = await PatientHistory.findOne({ patientId });
+    if (!patientHistory || patientHistory.history.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No history found for this patient." });
+    }
+
+    const lastRecord =
+      patientHistory.history[patientHistory.history.length - 1];
+
+    // Calculate the remaining amount
+    const previousRemaining = lastRecord.previousRemainingAmount || 0;
+    const newRemaining = previousRemaining + billingAmount - amountPaid;
+
+    // Update the patient's pending amount in the Patient schema
+    patient.pendingAmount = newRemaining < 0 ? 0 : newRemaining;
+    await patient.save();
+
+    // Update the last history record
+    // lastRecord.amountToBePayed = newRemaining;
+    // lastRecord.previousRemainingAmount = previousRemaining;
+    // lastRecord.lastBillingAmount = billingAmount;
+    // lastRecord.lastPaymentReceived = amountPaid;
+
+    await patientHistory.save();
+    const now = new Date();
+    const data = {
+      date: now.toISOString().split("T")[0], // Extracts the date in YYYY-MM-DD format
+      time: now.toTimeString().split(" ")[0], // Extracts the time in HH:MM:SS format
+    };
+    const billDetails = {
+      patientId: patientId,
+      name: patient.name,
+      gender: patient.gender,
+      contact: patient.contact,
+      weight: lastRecord.weight,
+      billingAmount: billingAmount,
+      amountPaid: amountPaid,
+      date: data.date,
+      time: data.time,
+      remainingAmount: newRemaining,
+      dischargeStatus: newRemaining > 0 ? "Pending Balance" : "Clear", // Added discharge status logic
+    };
+
+    const receiptHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Bill Receipt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #333;
+      margin: 0 0 20px 0;
+    }
+    .details {
+      margin: 20px 0;
+      line-height: 1.6;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td {
+      padding: 8px;
+      border: none;
+    }
+    .total {
+      margin: 20px 0;
+      padding: 15px;
+      text-align: center;
+      background: #f9f9f9;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    .discharge-status {
+      text-align: center;
+      font-size: 16px;
+      margin-top: 10px;
+      color: #4caf50;
+    }
+    .discharge-status.pending {
+      color: #ff5722;
+    }
+    footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+    }
+    @media screen and (max-width: 600px) {
+      .container {
+        padding: 10px;
+      }
+      table, tr, td {
+        display: block;
+        width: 100%;
+      }
+      td {
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+      }
+      td:last-child {
+        border-bottom: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Saideep Hospital</h1>
+    <h2>Payment Receipt</h2>
+    <div class="details">
+      <table>
+        <tr>
+          <td><strong>Patient ID:</strong> ${billDetails.patientId}</td>
+          <td><strong>Name:</strong> ${billDetails.name}</td>
+          <td><strong>Gender:</strong> ${billDetails.gender}</td>
+        </tr>
+        <tr>
+          <td><strong>Contact:</strong> ${billDetails.contact}</td>
+          <td><strong>Weight:</strong> ${billDetails.weight} kg</td>
+          <td><strong>Billing Amount:</strong> ₹${
+            billDetails.billingAmount
+          }</td>
+        </tr>
+        <tr>
+          <td><strong>Amount Paid:</strong> ₹${billDetails.amountPaid}</td>
+          <td><strong>Remaining Balance:</strong> ₹${
+            billDetails.remainingAmount
+          }</td>
+        </tr>
+      </table>
+    </div>
+    <div class="total">
+      Amount Paid: ₹${billDetails.amountPaid}
+    </div>
+    <div class="discharge-status ${
+      billDetails.dischargeStatus === "Pending Balance" ? "pending" : ""
+    }">
+      ${billDetails.dischargeStatus}
+    </div>
+    <footer>
+      Thank you for choosing our hospital. Please retain this receipt for future reference.
+    </footer>
+  </div>
+</body>
+</html>
+
+`;
+    const browser = await puppeteer.launch({
+      // args: [
+      //   "--disable-setuid-sandbox",
+      //   "--no-sandbox",
+      //   "--single-process",
+      //   "--no-zygote",
+      // ],
+      // executablePath:
+      //   process.env.PUPPETEER_EXECUTABLE_PATH ||
+      //   "/usr/bin/google-chrome-stable",
+    });
+    // console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
+    const page = await browser.newPage();
+    await page.setContent(receiptHtml);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
+
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      credentials: ServiceAccount,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
+
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `Bill_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+    return res.status(200).json({
+      message: "OPD receipt generated successfully.",
+      updatedPatient: {
+        patientId: patient.patientId,
+        pendingAmount: patient.pendingAmount,
+      },
+      updatedHistory: {
+        lastBillingAmount: billingAmount,
+        lastPaymentReceived: amountPaid,
+        remainingAmount: newRemaining,
+      },
+      fileLink: fileLink,
+    });
+  } catch (error) {
+    console.error("Error generating OPD receipt:", error);
+    return res.status(500).json({
+      message: "An error occurred while generating the OPD receipt.",
+      error: error.message,
+    });
+  }
+};
+export const generateaIpddReceipt = async (req, res) => {
+  try {
+    const { patientId, billingAmount, amountPaid } = req.body;
+
+    // Ensure required fields are present
+    if (!patientId || billingAmount == null || amountPaid == null) {
+      return res.status(400).json({
+        message: "Patient ID, billing amount, and amount paid are required.",
+      });
+    }
+
+    // Find the patient
+    const patient = await patientSchema.findOne({ patientId });
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
+    // Fetch the patient's most recent admission history
+    const patientHistory = await PatientHistory.findOne({ patientId });
+    if (!patientHistory || patientHistory.history.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No history found for this patient." });
+    }
+
+    const lastRecord =
+      patientHistory.history[patientHistory.history.length - 1];
+
+    // Calculate the remaining amount
+    const previousRemaining = lastRecord.previousRemainingAmount || 0;
+    const newRemaining = previousRemaining + billingAmount - amountPaid;
+
+    // Update the patient's pending amount in the Patient schema
+    patient.pendingAmount = newRemaining;
+    await patient.save();
+
+    // Update the last history record
+    // lastRecord.amountToBePayed = newRemaining;
+    // lastRecord.previousRemainingAmount = previousRemaining;
+    // lastRecord.lastBillingAmount = billingAmount;
+    // lastRecord.lastPaymentReceived = amountPaid;
+
+    await patientHistory.save();
+    const now = new Date();
+    const data = {
+      date: now.toISOString().split("T")[0], // Extracts the date in YYYY-MM-DD format
+      time: now.toTimeString().split(" ")[0], // Extracts the time in HH:MM:SS format
+    };
+    const billDetails = {
+      patientId: patientId,
+      name: patient.name,
+      gender: patient.gender,
+      contact: patient.contact,
+      weight: lastRecord.weight,
+      billingAmount: billingAmount,
+      amountPaid: amountPaid,
+      date: data.date,
+      time: data.time,
+      remainingAmount: newRemaining,
+      dischargeStatus: newRemaining > 0 ? "Pending Balance" : "Clear", // Added discharge status logic
+    };
+
+    const receiptHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patient Bill Receipt</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f9;
+    }
+    .container {
+      max-width: 600px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+    h1, h2 {
+      text-align: center;
+      color: #333;
+      margin: 0 0 20px 0;
+    }
+    .details {
+      margin: 20px 0;
+      line-height: 1.6;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td {
+      padding: 8px;
+      border: none;
+    }
+    .total {
+      margin: 20px 0;
+      padding: 15px;
+      text-align: center;
+      background: #f9f9f9;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 4px;
+    }
+    .discharge-status {
+      text-align: center;
+      font-size: 16px;
+      margin-top: 10px;
+      color: #4caf50;
+    }
+    .discharge-status.pending {
+      color: #ff5722;
+    }
+    footer {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 16px;
+      font-weight: bold;
+      color: #333;
+    }
+    @media screen and (max-width: 600px) {
+      .container {
+        padding: 10px;
+      }
+      table, tr, td {
+        display: block;
+        width: 100%;
+      }
+      td {
+        padding: 10px 0;
+        border-bottom: 1px solid #ddd;
+      }
+      td:last-child {
+        border-bottom: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Saideep Hospital</h1>
+    <h2>Payment Receipt</h2>
+    <div class="details">
+      <table>
+        <tr>
+          <td><strong>Patient ID:</strong> ${billDetails.patientId}</td>
+          <td><strong>Name:</strong> ${billDetails.name}</td>
+          <td><strong>Gender:</strong> ${billDetails.gender}</td>
+        </tr>
+        <tr>
+          <td><strong>Contact:</strong> ${billDetails.contact}</td>
+          <td><strong>Weight:</strong> ${billDetails.weight} kg</td>
+          <td><strong>Billing Amount:</strong> ₹${
+            billDetails.billingAmount
+          }</td>
+        </tr>
+        <tr>
+          <td><strong>Amount Paid:</strong> ₹${billDetails.amountPaid}</td>
+          <td><strong>Remaining Balance:</strong> ₹${
+            billDetails.remainingAmount
+          }</td>
+        </tr>
+      </table>
+    </div>
+    <div class="total">
+      Amount Paid: ₹${billDetails.amountPaid}
+    </div>
+    <div class="discharge-status ${
+      billDetails.dischargeStatus === "Pending Balance" ? "pending" : ""
+    }">
+      ${billDetails.dischargeStatus}
+    </div>
+    <footer>
+      Thank you for choosing our hospital. Please retain this receipt for future reference.
+    </footer>
+  </div>
+</body>
+</html>
+
+`;
+    const browser = await puppeteer.launch({
+      // args: [
+      //   "--disable-setuid-sandbox",
+      //   "--no-sandbox",
+      //   "--single-process",
+      //   "--no-zygote",
+      // ],
+      // executablePath:
+      //   process.env.PUPPETEER_EXECUTABLE_PATH ||
+      //   "/usr/bin/google-chrome-stable",
+    });
+    // console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
+    const page = await browser.newPage();
+    await page.setContent(receiptHtml);
+    const pdfBuffer = await page.pdf({ format: "A4" });
+    await browser.close();
+
+    // Authenticate with Google Drive API
+    const auth = new google.auth.GoogleAuth({
+      credentials: ServiceAccount,
+      scopes: ["https://www.googleapis.com/auth/drive"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+
+    // Convert PDF buffer into a readable stream
+    const bufferStream = new Readable();
+    bufferStream.push(pdfBuffer);
+    bufferStream.push(null);
+
+    // Folder ID in Google Drive
+    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+
+    // Upload PDF to Google Drive
+    const driveFile = await drive.files.create({
+      resource: {
+        name: `Bill_${patientId}.pdf`,
+        parents: [folderId],
+      },
+      media: {
+        mimeType: "application/pdf",
+        body: bufferStream,
+      },
+      fields: "id, webViewLink",
+    });
+
+    // Extract file's public link
+    const fileLink = driveFile.data.webViewLink;
+    return res.status(200).json({
+      message: "OPD receipt generated successfully.",
+      updatedPatient: {
+        patientId: patient.patientId,
+        pendingAmount: patient.pendingAmount,
+      },
+      updatedHistory: {
+        lastBillingAmount: billingAmount,
+        lastPaymentReceived: amountPaid,
+        remainingAmount: newRemaining,
+      },
+      fileLink: fileLink,
+    });
+  } catch (error) {
+    console.error("Error generating OPD receipt:", error);
+    return res.status(500).json({
+      message: "An error occurred while generating the OPD receipt.",
+      error: error.message,
+    });
   }
 };

@@ -8,6 +8,8 @@ import {
   generateBillForDischargedPatient,
   generateDeclaration,
   generateFinalReceipt,
+  generateOpdBill,
+  generateOpdReceipt,
   getDischargedPatientHistory,
   getDoctorAdvic1,
   getDoctorAdvice,
@@ -65,5 +67,7 @@ receiptionRouter.get(
   "/getLastFollowUps/:patientId",
   getLastRecordWithFollowUps
 );
+receiptionRouter.post("/generateOpdBill", generateOpdBill);
+receiptionRouter.post("/generateOpdReceipt", generateOpdReceipt);
 
 export default receiptionRouter;
