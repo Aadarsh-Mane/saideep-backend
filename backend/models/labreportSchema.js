@@ -20,6 +20,7 @@ const labReportSchema = new mongoose.Schema({
     type: String,
     required: true,
     default: " ", // Default value for the doctor who gave the lab test name. This can be updated by the doctor later.
+    date: { type: Date, default: Date.now }, // Timestamp for when the lab test was requested
   },
   reports: [
     {

@@ -1028,7 +1028,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
 </head>
 <body>
     <div class="header">
-        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="Hospital Logo" />
+        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="Hospital Logo" />
         <h1>Hospital Bill</h1>
     </div>
     <div class="patient-details">
@@ -1514,7 +1514,7 @@ export const getDoctorAdvice = async (req, res) => {
 <body>
     <div class="container">
         <div class="header">
-            <img src="./saideepheader.png" alt="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="header">
         </div>
         <div class="details">
             <div class="details-row">
@@ -2056,7 +2056,7 @@ export const getDoctorAdvic1 = async (req, res) => {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="header">
         </div>
         <div class="details">
             <div class="details-row">
@@ -2123,7 +2123,7 @@ export const getDoctorAdvic1 = async (req, res) => {
                         <tr>
                             <td>${prescription.medicine.name}</td>
                             <td>M: ${prescription.medicine.morning} / A: ${prescription.medicine.afternoon} / N: ${prescription.medicine.night}</td>
-                            <td>${prescription.frequency}</td>
+                            <td>${prescription.medicine.comment}</td>
                         </tr>
                         `
                           )
@@ -2386,7 +2386,7 @@ export const getDoctorSheet = async (req, res) => {
 <body>
     <div class="container" id="page-1">
         <div class="header">
-            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="header">
             <h3>DOCTOR INITIAL ASSESSMENT SHEET</h3>
         </div>
         <div class="section">
@@ -2835,7 +2835,7 @@ export const generateOpdBill = async (req, res) => {
 </head>
 <body>
     <div class="header">
-        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="Hospital Logo" />
+        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="Hospital Logo" />
         <h1>Hospital Bill</h1>
     </div>
     <div class="patient-details">
