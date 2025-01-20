@@ -107,7 +107,7 @@ const admissionRecordSchema = new mongoose.Schema({
     {
       temperature: { type: Number }, // Temperature in Celsius or Fahrenheit
       pulse: { type: Number }, // Pulse rate
-      bloodPressure: { type: Number },
+      bloodPressure: { type: String },
       bloodSugarLevel: { type: Number },
       other: { type: String }, // For additional vital information
 

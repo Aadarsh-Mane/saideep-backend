@@ -845,7 +845,7 @@ export const addVitals = async (req, res) => {
 export const fetchVitals = async (req, res) => {
   try {
     const { patientId, admissionId } = req.params;
-
+    console.log(req.body);
     // Validate that both patientId and admissionId are provided
     if (!patientId || !admissionId) {
       return res
