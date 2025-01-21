@@ -3492,3 +3492,35 @@ export const generateaIpddReceipt = async (req, res) => {
     });
   }
 };
+export const getBasicPatientInfo = async (req, res) => {
+  const { name } = req.query;
+  console.log("name", name);
+  if (!name) {
+    return res
+      .status(400)
+      .json({ message: "Name query parameter is required" });
+  }
+
+  try {
+    const patient = await patientSchema.findOne({
+      name: new RegExp(name, "i"),
+    }); // Case-insensitive search
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    return res.status(200).json({ patientId: patient.patientId });
+  } catch (error) {
+    console.error("Error fetching patient:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+export const getPatientSuggestions = async (req, res) => {
+  const name = req.query.name || "";
+  const suggestions = await patientSchema
+    .find({
+      name: { $regex: name, $options: "i" },
+    })
+    .limit(10);
+  res.json(suggestions.map((patient) => patient.name));
+};

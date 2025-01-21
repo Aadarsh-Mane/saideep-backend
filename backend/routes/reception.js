@@ -10,12 +10,14 @@ import {
   generateFinalReceipt,
   generateOpdBill,
   generateOpdReceipt,
+  getBasicPatientInfo,
   getDischargedPatientHistory,
   getDoctorAdvic1,
   getDoctorAdvice,
   getDoctorSheet,
   getDoctorsPatient,
   getLastRecordWithFollowUps,
+  getPatientSuggestions,
   listAllPatientsWithLastRecord,
   listDoctors,
   listPatients,
@@ -69,5 +71,7 @@ receiptionRouter.get(
 );
 receiptionRouter.post("/generateOpdBill", generateOpdBill);
 receiptionRouter.post("/generateOpdReceipt", generateOpdReceipt);
+receiptionRouter.get("/info", getBasicPatientInfo);
+receiptionRouter.get("/suggestions", getPatientSuggestions);
 
 export default receiptionRouter;
