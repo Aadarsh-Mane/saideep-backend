@@ -333,22 +333,27 @@ export const getPatientsAssignedByDoctor = async (req, res) => {
     }) // Filter out records with null patientId
       .populate({
         path: "patientId",
-        select: "name age gender contact", // Select specific fields from the Patient schema
+        match: { admissionRecords: { $exists: true, $not: { $size: 0 } } }, // Exclude patients with empty admissionRecords
+        select: "name age gender contact admissionRecords", // Select specific fields from the Patient schema
       })
       .populate({
         path: "doctorId",
         select: "doctorName email", // Select specific fields from the Doctor schema
-      });
+      })
+      .sort({ _id: -1 }); // Sort by _id in descending order (newest documents first)
 
-    if (!labReports || labReports.length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No patients assigned by this doctor." });
+    // Filter out lab reports where patientId is null after population
+    const filteredLabReports = labReports.filter((report) => report.patientId);
+
+    if (!filteredLabReports || filteredLabReports.length === 0) {
+      return res.status(404).json({
+        message: "No patients with admission records assigned by this doctor.",
+      });
     }
 
     res.status(200).json({
       message: "Patients assigned by the doctor retrieved successfully",
-      labReports,
+      labReports: filteredLabReports,
     });
   } catch (error) {
     console.error("Error retrieving patients assigned by doctor:", error);

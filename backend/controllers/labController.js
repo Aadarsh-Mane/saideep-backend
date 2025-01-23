@@ -58,7 +58,8 @@ export const getPatientsAssignedToLab = async (req, res) => {
       .populate({
         path: "doctorId",
         select: "doctorName email", // Only include necessary doctor fields
-      });
+      })
+      .sort({ _id: -1 }); // Sort by _id in descending order (newest documents first)
 
     if (!labReports || labReports.length === 0) {
       return res
