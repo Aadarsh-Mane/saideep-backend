@@ -10,6 +10,7 @@ import {
   generateFinalReceipt,
   generateOpdBill,
   generateOpdReceipt,
+  getAiSggestions,
   getBasicPatientInfo,
   getDischargedPatientHistory,
   getDoctorAdvic1,
@@ -73,5 +74,6 @@ receiptionRouter.post("/generateOpdBill", generateOpdBill);
 receiptionRouter.post("/generateOpdReceipt", generateOpdReceipt);
 receiptionRouter.get("/info", getBasicPatientInfo);
 receiptionRouter.get("/suggestions", getPatientSuggestions);
+receiptionRouter.get("/ai", getAiSggestions);
 
 export default receiptionRouter;

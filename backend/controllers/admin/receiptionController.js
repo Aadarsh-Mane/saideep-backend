@@ -1028,7 +1028,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
 </head>
 <body>
     <div class="header">
-        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="Hospital Logo" />
+        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1737924501/Spandan_Hospital_nriqjl.png" alt="Hospital Logo" />
         <h1>Hospital Bill</h1>
     </div>
     <div class="patient-details">
@@ -1514,7 +1514,7 @@ export const getDoctorAdvice = async (req, res) => {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1737924501/Spandan_Hospital_nriqjl.png" alt="header">
         </div>
         <div class="details">
             <div class="details-row">
@@ -2056,7 +2056,7 @@ export const getDoctorAdvic1 = async (req, res) => {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1737924501/Spandan_Hospital_nriqjl.png" alt="header">
         </div>
         <div class="details">
             <div class="details-row">
@@ -2386,7 +2386,7 @@ export const getDoctorSheet = async (req, res) => {
 <body>
     <div class="container" id="page-1">
         <div class="header">
-            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1737924501/Spandan_Hospital_nriqjl.png" alt="header">
             <h3>DOCTOR INITIAL ASSESSMENT SHEET</h3>
         </div>
         <div class="section">
@@ -2656,8 +2656,9 @@ export const generateOpdBill = async (req, res) => {
     // Extract patient history, lab charges, other charges, and dates from the request body
     const { patientId, labCharges, otherCharges, labDate, otherChargesDate } =
       req.body;
+    console.log(patientId);
     const patient = await patientSchema.findOne({ patientId });
-
+    console.log("here is patient", patient);
     if (!patient) {
       return res.status(404).json({ error: "Patient not found." });
     }
@@ -2835,7 +2836,7 @@ export const generateOpdBill = async (req, res) => {
 </head>
 <body>
     <div class="header">
-        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736957756/certificates/z0vok3xrqx6tdyhpoeqj.png" alt="Hospital Logo" />
+        <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1737924501/Spandan_Hospital_nriqjl.png" alt="Hospital Logo" />
         <h1>Hospital Bill</h1>
     </div>
     <div class="patient-details">
@@ -3523,4 +3524,63 @@ export const getPatientSuggestions = async (req, res) => {
     })
     .limit(10);
   res.json(suggestions.map((patient) => patient.name));
+};
+
+// Controller to get age, weight, symptoms, and vitals by admissionId and patientId
+// router.get('/getPatientDetails', async (req, res) => {
+export const getAiSggestions = async (req, res) => {
+  try {
+    const { admissionId, patientId } = req.body;
+
+    // Validate query parameters
+    if (!admissionId || !patientId) {
+      return res
+        .status(400)
+        .json({ message: "Admission ID and Patient ID are required" });
+    }
+
+    // Find the patient by patientId
+    const patient = await patientSchema.findOne({ patientId: patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the admission record by admissionId in the patient's admission records
+    const admissionRecord = patient.admissionRecords.find(
+      (record) => record._id.toString() === admissionId
+    );
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Format symptoms (remove the date from each entry)
+    const formattedSymptoms = admissionRecord.symptomsByDoctor.map(
+      (symptom) => {
+        const parts = symptom.split(" - ");
+        return parts.length > 1 ? parts[0] : parts[0]; // Remove date part
+      }
+    );
+
+    // Format vitals (remove line breaks and date from the 'other' field)
+    const formattedVitals = admissionRecord.vitals.map((vital) => {
+      vital.other = vital.other.replace(/\n.*$/, ""); // Remove line breaks and the date part
+      return vital;
+    });
+
+    // Get the required details
+    const patientDetails = {
+      age: patient.age,
+      weight: admissionRecord.weight,
+      symptoms: formattedSymptoms,
+      vitals: formattedVitals,
+    };
+
+    // Send the formatted details back as response
+    return res.status(200).json(patientDetails);
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
 };
