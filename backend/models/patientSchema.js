@@ -105,10 +105,10 @@ const admissionRecordSchema = new mongoose.Schema({
 
   vitals: [
     {
-      temperature: { type: Number }, // Temperature in Celsius or Fahrenheit
-      pulse: { type: Number }, // Pulse rate
+      temperature: { type: String }, // Temperature in Celsius or Fahrenheit
+      pulse: { type: String }, // Pulse rate
       bloodPressure: { type: String },
-      bloodSugarLevel: { type: Number },
+      bloodSugarLevel: { type: String },
       other: { type: String }, // For additional vital information
 
       recordedAt: { type: Date, default: Date.now }, // Timestamp for when the vitals were recorded

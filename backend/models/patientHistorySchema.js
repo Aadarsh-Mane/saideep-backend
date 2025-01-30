@@ -130,10 +130,10 @@ const patientHistorySchema = new mongoose.Schema({
       symptomsByDoctor: { type: [String] }, // Array to store symptoms added by the doctor
       vitals: [
         {
-          temperature: { type: Number },
-          pulse: { type: Number },
-          bloodPressure: { type: Number },
-          bloodSugarLevel: { type: Number },
+          temperature: { type: String },
+          pulse: { type: String },
+          bloodPressure: { type: String },
+          bloodSugarLevel: { type: String },
 
           other: { type: String },
           recordedAt: { type: Date, default: Date.now },

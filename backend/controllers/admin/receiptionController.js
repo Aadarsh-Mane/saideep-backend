@@ -196,10 +196,11 @@ export const addPatient = async (req, res) => {
       if (isReadmission === "true") {
         // Fetch patient by name and contact (or implement different search criteria)
         // patient = await patientSchema.findOne({ name, contact });
-        if (!req.body.patientId)
+        if (!req.body.patientId) {
           return res
             .status(404)
             .json({ error: "Patient ID is required for readmission." });
+        }
         patient = await patientSchema.findOne({
           patientId: req.body.patientId,
         }); // Assuming patientId is provided for readmission
@@ -322,10 +323,23 @@ export const addPatient = async (req, res) => {
         patient = await patientSchema.findOne({
           patientId: req.body.patientId,
         }); // Assuming patientId is provided for readmission
-        if (!patient.discharged)
+        if (!patient.discharged) {
           return res
             .status(400)
             .json({ message: "Patient is not discharged." });
+        }
+        const addy = req.body.patientId;
+        const patientHistory = await PatientHistory.findOne({
+          patientId: addy,
+        });
+        const lastRecord =
+          patientHistory.history[patientHistory.history.length - 1];
+
+        if (!lastRecord.dischargedByReception) {
+          return res.status(400).json({
+            message: "Patient has not been discharged by reception.",
+          });
+        }
         if (patient) {
           let daysSinceLastAdmission = null;
 
@@ -1234,6 +1248,7 @@ export const generateBillForDischargedPatient = async (req, res) => {
 export const generateFeeReceipt = (req, res) => {};
 
 export const listAllPatientsWithLastRecord = async (req, res) => {
+  console.log("listAllPatientsWithLastRecord");
   try {
     const patientsHistory = await PatientHistory.aggregate([
       // Filter to only include records where dischargedByReception is false
