@@ -269,13 +269,13 @@ export const addPatient = async (req, res) => {
 
           // Save updated patient record
           await patient.save();
-          const messageBody = `Dear ${name}, welcome to our saideep hospital. Your patient ID is ${req.body.patientId}. Wishing you a speedy recovery!`;
+          // const messageBody = `Dear ${name}, welcome to our saideep hospital. Your patient ID is ${req.body.patientId}. Wishing you a speedy recovery!`;
 
-          await client.messages.create({
-            from: "+14152149378", // Twilio phone number
-            to: `+91${contact}`, // Ensure the correct string interpolation
-            body: messageBody,
-          });
+          // await client.messages.create({
+          //   from: "+14152149378", // Twilio phone number
+          //   to: `+91${contact}`, // Ensure the correct string interpolation
+          //   body: messageBody,
+          // });
           return res.status(200).json({
             message: `Patient ${name} re-admitted successfully.`,
             patientDetails: patient,
@@ -312,13 +312,13 @@ export const addPatient = async (req, res) => {
         });
 
         await patient.save();
-        const messageBody = `Dear ${name}, welcome to our saideep hospital. Your patient ID is ${patientId}. Wishing you a speedy recovery!`;
+        // const messageBody = `Dear ${name}, welcome to our saideep hospital. Your patient ID is ${patientId}. Wishing you a speedy recovery!`;
 
-        await client.messages.create({
-          from: "+14152149378", // Twilio phone number
-          to: `+91${contact}`, // Ensure the correct string interpolation
-          body: messageBody,
-        });
+        // await client.messages.create({
+        //   from: "+14152149378", // Twilio phone number
+        //   to: `+91${contact}`, // Ensure the correct string interpolation
+        //   body: messageBody,
+        // });
         return res.status(200).json({
           message: `Patient ${name} added successfully with ID ${patientId}.`,
           patientDetails: patient,
@@ -412,13 +412,13 @@ export const addPatient = async (req, res) => {
 
           // Save updated patient record
           await patient.save();
-          const messageBody = `Dear ${name}, welcome to our saideep hospital. Your patient ID is ${req.body.patientId}. Wishing you a speedy recovery!`;
+          // const messageBody = `Dear ${name}, welcome to our saideep hospital. Your patient ID is ${req.body.patientId}. Wishing you a speedy recovery!`;
 
-          await client.messages.create({
-            from: "+14152149378", // Twilio phone number
-            to: `+91${contact}`, // Ensure the correct string interpolation
-            body: messageBody,
-          });
+          // await client.messages.create({
+          //   from: "+14152149378", // Twilio phone number
+          //   to: `+91${contact}`, // Ensure the correct string interpolation
+          //   body: messageBody,
+          // });
           return res.status(200).json({
             message: `Patient ${name} re-admitted successfully.`,
             patientDetails: patient,
@@ -454,13 +454,13 @@ export const addPatient = async (req, res) => {
         });
 
         await patient.save();
-        const messageBody = `Dear ${name}, welcome to our spandan hospital. Your patient ID is ${patientId}. Wishing you a speedy recovery!`;
+        // const messageBody = `Dear ${name}, welcome to our spandan hospital. Your patient ID is ${patientId}. Wishing you a speedy recovery!`;
 
-        await client.messages.create({
-          from: "+14152149378", // Twilio phone number
-          to: `+91${contact}`, // Ensure the correct string interpolation
-          body: messageBody,
-        });
+        // await client.messages.create({
+        //   from: "+14152149378", // Twilio phone number
+        //   to: `+91${contact}`, // Ensure the correct string interpolation
+        //   body: messageBody,
+        // });
         return res.status(200).json({
           message: `Patient ${name} added successfully with ID ${patientId}.`,
           patientDetails: patient,
