@@ -10,7 +10,10 @@ import path from "path";
 // import fs from "fs";
 import fs from "fs/promises";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-
+import Attendance from "../models/attendanceSchema.js";
+import Nurse from "../models/nurseSchema.js";
+import moment from "moment-timezone";
+import axios from "axios";
 export const getPatients = async (req, res) => {
   console.log(req.usertype);
   try {
@@ -451,6 +454,8 @@ export const dischargePatient = async (req, res) => {
       doctor: admissionRecord.doctor,
       reports: admissionRecord.reports,
       followUps: followUps,
+
+      fourHrFollowUpSchema: fourHrFollowUpSchema,
       labReports: labReports.map((report) => ({
         labTestNameGivenByDoctor: report.labTestNameGivenByDoctor,
         reports: report.reports,
@@ -1289,5 +1294,150 @@ export const deletedPrescription = async (req, res) => {
   } catch (error) {
     console.error("Error deleting prescription:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+const formatISTDate = (date) => {
+  if (!date) return null;
+  return moment(date).tz("Asia/Kolkata").format("DD-MM-YYYY hh:mm A");
+};
+export const seeAllAttendees = async (req, res) => {
+  try {
+    const { name } = req.query;
+    if (!name) {
+      return res.status(400).json({ message: "Nurse name is required" });
+    }
+
+    // Case-insensitive search
+    const attendanceRecords = await Attendance.find({
+      nurseName: { $regex: new RegExp(name, "i") },
+    });
+
+    if (attendanceRecords.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No records found for this nurse" });
+    }
+
+    // Format the date fields before returning the records
+    const formattedRecords = attendanceRecords.map((record) => ({
+      ...record.toObject(),
+      date: formatISTDate(record.date),
+      checkIn: {
+        ...record.checkIn,
+        time: formatISTDate(record.checkIn.time),
+      },
+      checkOut: record.checkOut
+        ? {
+            ...record.checkOut,
+            time: formatISTDate(record.checkOut.time),
+          }
+        : null,
+    }));
+
+    res.json(formattedRecords);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+export const getAllNurses = async (req, res) => {
+  try {
+    const nurses = await Nurse.find().select("nurseName -_id");
+    res.json(nurses);
+  } catch (error) {
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+};
+
+export const getPatientSuggestions = async (req, res) => {
+  const { patientId } = req.params;
+  console.log("Recording patient");
+
+  try {
+    const patient = await patientSchema.findOne(
+      { patientId },
+      {
+        age: 1,
+        gender: 1,
+        admissionRecords: 1, // Get the full admission record
+      }
+    );
+
+    if (!patient || patient.admissionRecords.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Patient or Admission record not found" });
+    }
+
+    // Since there's always one admission record, we take the first one
+    const admission = patient.admissionRecords[0];
+
+    return res.json({
+      age: patient.age,
+      gender: patient.gender,
+      weight: admission.weight,
+      symptoms: admission.symptomsByDoctor,
+      vitals: admission.vitals,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: "Error fetching patient details" });
+  }
+};
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+export const getDiagnosis = async (req, res) => {
+  try {
+    // Extract patientId from the request body
+    const { patientId } = req.params;
+    console.log("This is the patient ID: ", patientId);
+
+    if (!patientId) {
+      return res.status(400).json({ error: "Patient ID is required" });
+    }
+
+    // Fetch patient data from the existing API
+    const { data } = await axios.get(
+      `http://localhost:3000/doctors/getPatientSuggestion/${patientId}`
+    );
+
+    // Extract necessary fields
+    const { age, gender, weight, symptoms, vitals } = data;
+
+    // Create a structured prompt for AI
+    const prompt = `
+      Given the following patient details, provide a JSON array of possible diagnoses.
+      - Age: ${age}
+      - Gender: ${gender}
+      - Weight: ${weight} kg
+      - Symptoms: ${symptoms.join(", ")}
+      - Vitals:
+        - Temperature: ${vitals[0]?.temperature}°F
+        - Pulse: ${vitals[0]?.pulse} BPM
+        - Blood Pressure: ${vitals[0]?.bloodPressure} mmHg
+        - Blood Sugar Level: ${vitals[0]?.bloodSugarLevel} mg/dL
+    
+      Format the response as a **valid JSON array** give me atleast five possible:
+      [
+        "Disease 1",
+        "Disease 2",
+        "Disease 3"
+      ]
+    `;
+
+    // Query the AI model
+    const result = await model.generateContent(prompt);
+    let diagnosis = result.response.text();
+
+    // Clean up the response to remove markdown formatting and extract valid JSON
+    diagnosis = diagnosis.replace(/```json\n|\n```/g, "").trim();
+
+    // Parse the cleaned string into a JSON array
+    const diagnosisArray = JSON.parse(diagnosis);
+
+    // Send the cleaned-up response as a JSON array
+    res.json({ diagnosis: diagnosisArray });
+  } catch (error) {
+    console.error("Error fetching diagnosis:", error);
+    res.status(500).json({ error: "Failed to get diagnosis" });
   }
 };

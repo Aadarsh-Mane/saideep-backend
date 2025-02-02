@@ -21,13 +21,17 @@ import {
   fetchVitals,
   getAdmittedPatientsByDoctor,
   getAllDoctorsProfiles,
+  getAllNurses,
   getAssignedPatients,
+  getDiagnosis,
   getDischargedPatientsByDoctor,
   getDoctorConsulting,
   getDoctorProfile,
   getPatientHistory1,
   getPatients,
   getPatientsAssignedByDoctor,
+  getPatientSuggestions,
+  seeAllAttendees,
   suggestions,
   updateConditionAtDischarge,
 } from "../controllers/doctorController.js";
@@ -62,6 +66,10 @@ doctorRouter.post("/addDiagnosis", addDiagnosisByDoctor);
 doctorRouter.post("/addDoctorConsultant", addDoctorConsultant);
 doctorRouter.get("/fetchDiagnosis/:patientId/:admissionId", fetchDiagnosis);
 doctorRouter.post("/updateCondition", auth, updateConditionAtDischarge);
+doctorRouter.get("/allAttendees", seeAllAttendees);
+doctorRouter.get("/allNurses", getAllNurses);
+doctorRouter.get("/getPatientSuggestion/:patientId", getPatientSuggestions);
+doctorRouter.get("/getDiagnosis/:patientId", getDiagnosis);
 doctorRouter.delete(
   "/deletePrescription/:patientId/:admissionId/:prescriptionId",
   deletedPrescription

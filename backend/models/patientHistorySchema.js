@@ -15,12 +15,12 @@ const followUpSchema = new mongoose.Schema({
 
   notes: { type: String, required: true },
   observations: { type: String },
-  temperature: { type: Number }, // T (Temperature)
-  pulse: { type: Number }, // P (Pulse)
-  respirationRate: { type: Number }, // R (Respiration Rate)
+  temperature: { type: String }, // T (Temperature)
+  pulse: { type: String }, // P (Pulse)
+  respirationRate: { type: String }, // R (Respiration Rate)
   bloodPressure: { type: String }, // Non-Invasive Blood Pressure
-  oxygenSaturation: { type: Number }, // SpO2 (Oxygen Saturation)
-  bloodSugarLevel: { type: Number }, // BSL (Blood Sugar Level)
+  oxygenSaturation: { type: String }, // SpO2 (Oxygen Saturation)
+  bloodSugarLevel: { type: String }, // BSL (Blood Sugar Level)
   otherVitals: { type: String }, // OTHER (Any other vitals to be recorded)
 
   // Intake data (IV Fluids, Nasogastric, Feed, etc.)
@@ -38,13 +38,26 @@ const followUpSchema = new mongoose.Schema({
 
   // Ventilator data (Mode, Rate, FiO2, etc.)
   ventyMode: { type: String }, // VentyMode (Ventilator Mode)
-  setRate: { type: Number }, // Set Rate (Set ventilator rate)
-  fiO2: { type: Number }, // FiO2 (Fraction of Inspired Oxygen)
-  pip: { type: Number }, // PIP (Peak Inspiratory Pressure)
+  setRate: { type: String }, // Set Rate (Set ventilator rate)
+  fiO2: { type: String }, // FiO2 (Fraction of Inspired Oxygen)
+  pip: { type: String }, // PIP (Peak Inspiratory Pressure)
   peepCpap: { type: String }, // PEEP/CPAP (Positive End-Expiratory Pressure/Continuous Positive Airway Pressure)
   ieRatio: { type: String }, // I:E Ratio (Inspiratory to Expiratory Ratio)
   otherVentilator: { type: String }, // Other (Any
+});
 
+const fourHrFollowUpSchema = new mongoose.Schema({
+  nurseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Nurse",
+    required: true,
+  }, // Nurse who recorded the follow-up
+
+  date: { type: String }, // Date and time of the 4-hour follow-up
+  notes: { type: String, required: true }, // Additional notes
+  observations: { type: String }, // Observations during the follow-up
+
+  // Vital signs for 4-hour follow-up
   fourhrpulse: { type: String },
   fourhrbloodPressure: { type: String },
   fourhroxygenSaturation: { type: String },
@@ -84,6 +97,7 @@ const patientHistorySchema = new mongoose.Schema({
       },
       reports: [{ type: mongoose.Schema.Types.ObjectId, ref: "PatientReport" }],
       followUps: [followUpSchema], // Array of follow-up records for each admission
+      fourHrFollowUpSchema: [fourHrFollowUpSchema], // Array of 4-hour follow-up records for each admission
 
       labReports: [
         {
