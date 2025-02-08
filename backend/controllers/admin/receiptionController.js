@@ -1348,6 +1348,7 @@ export const listAllPatientsWithLastRecord = async (req, res) => {
           : null;
       }
     });
+    console.log(patientsHistory);
 
     return res.status(200).json(patientsHistory);
   } catch (error) {

@@ -436,6 +436,12 @@ export const dischargePatient = async (req, res) => {
       ...followUp.toObject(), // Spread the follow-up data
       // Include additional or computed values if necessary (e.g., final observations)
     }));
+    const fourHrFollowUpSchema = admissionRecord.fourHrFollowUpSchema.map(
+      (followUp) => ({
+        ...followUp.toObject(), // Spread the follow-up data
+        // Include additional or computed values if necessary (e.g., final observations)
+      })
+    );
     console.log("doctorConsulting:", admissionRecord.doctorConsulting);
 
     // Append the admission record to the history, including lab reports
