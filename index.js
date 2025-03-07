@@ -15,7 +15,7 @@ import { Server } from "socket.io";
 import http from "http";
 import { socketHandler } from "./socketHandler.js";
 import fs from "fs";
-const port = 3000;
+const port = 4001;
 
 const app = express();
 const server = http.createServer(app);
