@@ -1302,6 +1302,42 @@ export const deletedPrescription = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+export const deletedVitals = async (req, res) => {
+  console.log("Deleting vitals");
+  // app.delete("/prescriptions/:id", async (req, res) => {
+  // app.delete("/doctors/deletePrescription/:patientId/:admissionId/:prescriptionId", async (req, res) => {
+  const { patientId, admissionId, vitalsId } = req.params;
+
+  try {
+    // Find the patient and remove the prescription from the specific admission record
+    const updatedPatient = await patientSchema.findOneAndUpdate(
+      {
+        patientId: patientId,
+        "admissionRecords._id": admissionId, // Match the admission record
+      },
+      {
+        $pull: {
+          "admissionRecords.$.vitals": { _id: vitalsId },
+        }, // Remove the prescription
+      },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedPatient) {
+      return res.status(404).json({
+        message: "Patient, admission record, or prescription not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Vitlas deleted successfully",
+      updatedPatient,
+    });
+  } catch (error) {
+    console.error("Error deleting vitals:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 const formatISTDate = (date) => {
   if (!date) return null;
   return moment(date).tz("Asia/Kolkata").format("DD-MM-YYYY hh:mm A");
@@ -1403,9 +1439,9 @@ export const getDiagnosis = async (req, res) => {
 
     // Fetch patient data from the existing API
     const { data } = await axios.get(
-      `http://localhost:3000/doctors/getPatientSuggestion/${patientId}`
+      `https://saideep.code2pdf.in/doctors/getPatientSuggestion/${patientId}`
     );
-
+    console.log(data);
     // Extract necessary fields
     const { age, gender, weight, symptoms, vitals } = data;
 
@@ -1439,11 +1475,80 @@ export const getDiagnosis = async (req, res) => {
 
     // Parse the cleaned string into a JSON array
     const diagnosisArray = JSON.parse(diagnosis);
-
+    console.log(diagnosisArray);
     // Send the cleaned-up response as a JSON array
     res.json({ diagnosis: diagnosisArray });
   } catch (error) {
-    console.error("Error fetching diagnosis:", error);
+    console.log("Error fetching diagnosis:", error);
     res.status(500).json({ error: "Failed to get diagnosis" });
+  }
+};
+export const deleteSymptom = async (req, res) => {
+  console.log("Deleting symptom");
+  const { patientId, admissionId, symptom } = req.params;
+
+  try {
+    const updatedPatient = await patientSchema.findOneAndUpdate(
+      {
+        patientId: patientId,
+        "admissionRecords._id": admissionId, // Find the specific admission record
+      },
+      {
+        $pull: {
+          "admissionRecords.$.symptomsByDoctor": symptom, // Remove the specific symptom
+        },
+      },
+      { new: true } // Return the updated document
+    );
+
+    if (!updatedPatient) {
+      return res.status(404).json({
+        message: "Patient or admission record not found",
+      });
+    }
+
+    res.status(200).json({
+      message: "Symptom deleted successfully",
+      updatedPatient,
+    });
+  } catch (error) {
+    console.error("Error deleting symptom:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const deleteDiagnosis = async (req, res) => {
+  console.log("Deleting diagnosis");
+  const { patientId, admissionId, diagnosis } = req.params;
+
+  try {
+    const updatedPatient = await patientSchema.findOneAndUpdate(
+      {
+        patientId: patientId,
+        "admissionRecords._id": admissionId,
+      },
+      {
+        $pull: {
+          "admissionRecords.$[record].diagnosisByDoctor": diagnosis,
+        },
+      },
+      {
+        new: true,
+        arrayFilters: [{ "record._id": admissionId }],
+      }
+    );
+
+    if (!updatedPatient) {
+      return res
+        .status(404)
+        .json({ message: "Patient or admission record not found" });
+    }
+
+    res.status(200).json({
+      message: "Diagnosis deleted successfully",
+      updatedPatient,
+    });
+  } catch (error) {
+    console.error("Error deleting diagnosis:", error);
+    res.status(500).json({ message: "Internal server error" });
   }
 };

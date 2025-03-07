@@ -12,7 +12,10 @@ import {
   askQuestion,
   askQuestionAI,
   assignPatientToLab,
+  deleteDiagnosis,
   deletedPrescription,
+  deletedVitals,
+  deleteSymptom,
   dischargePatient,
   fetchConsultant,
   fetchDiagnosis,
@@ -73,6 +76,18 @@ doctorRouter.get("/getDiagnosis/:patientId", getDiagnosis);
 doctorRouter.delete(
   "/deletePrescription/:patientId/:admissionId/:prescriptionId",
   deletedPrescription
+);
+doctorRouter.delete(
+  "/deleteVitals/:patientId/:admissionId/:vitalsId",
+  deletedVitals
+);
+doctorRouter.delete(
+  "/deleteSymptom/:patientId/:admissionId/:symptom",
+  deleteSymptom
+);
+doctorRouter.delete(
+  "/deleteDiagnosis/:patientId/:admissionId/:diagnosis",
+  deleteDiagnosis
 );
 
 doctorRouter.get(

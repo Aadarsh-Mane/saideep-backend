@@ -18,6 +18,9 @@ import mongoose from "mongoose";
 import pdf from "html-pdf";
 import dotenv from "dotenv";
 import moment from "moment";
+import cloudinary from "../../helpers/cloudinary.js";
+import { generatePdf } from "../../services/pdfGenerator.js";
+import { uploadToDrive } from "../../services/uploader.js";
 dotenv.config(); // Load environment variables from .env file
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -1957,7 +1960,7 @@ export const generateFinalReceipt = async (req, res) => {
 
 export const getDoctorAdvic1 = async (req, res) => {
   const { patientId, admissionId } = req.params; // Include admissionId from request params
-
+  console.log(patientId, admissionId);
   try {
     // Find the patient details from the patient schema
     const patient = await patientSchema.findOne({ patientId });
@@ -2179,22 +2182,30 @@ export const getDoctorAdvic1 = async (req, res) => {
 </body>
 </html>
     `;
-    const browser = await puppeteer.launch({
-      // args: [
-      //   "--disable-setuid-sandbox",
-      //   "--no-sandbox",
-      //   "--single-process",
-      //   "--no-zygote",
-      // ],
-      // executablePath:
-      //   process.env.PUPPETEER_EXECUTABLE_PATH ||
-      //   "/usr/bin/google-chrome-stable",
-    });
-    console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
-    const page = await browser.newPage();
-    await page.setContent(doctorAdviceHtml);
-    const pdfBuffer = await page.pdf({ format: "A4" });
-    await browser.close();
+    const pdfBuffer = await generatePdf(doctorAdviceHtml);
+    const driveLink = await uploadToDrive(
+      pdfBuffer,
+      `DoctorAdvice_${req.params.patientId}.pdf`,
+      "1MKYZ4fIUzERPyYzL_8I101agWemxVXts" // Folder ID
+    );
+    // const cloudinaryLink = await uploadToCloudinary(pdfBuffer);
+
+    // const browser = await puppeteer.launch({
+    //   // args: [
+    //   //   "--disable-setuid-sandbox",
+    //   //   "--no-sandbox",
+    //   //   "--single-process",
+    //   //   "--no-zygote",
+    //   // ],
+    //   // executablePath:
+    //   //   process.env.PUPPETEER_EXECUTABLE_PATH ||
+    //   //   "/usr/bin/google-chrome-stable",
+    // });
+    // console.log("check thei path", process.env.PUPPETEER_EXECUTABLE_PATH);
+    // const page = await browser.newPage();
+    // await page.setContent(doctorAdviceHtml);
+    // const pdfBuffer = await page.pdf({ format: "A4" });
+    // await browser.close();
     // Generate PDF from HTML
     // pdf
     //   .create(doctorAdviceHtml, { format: "A4" })
@@ -2207,41 +2218,39 @@ export const getDoctorAdvic1 = async (req, res) => {
     //     }
 
     // Authenticate with Google Drive API
-    const auth = new google.auth.GoogleAuth({
-      credentials: ServiceAccount,
-      // keyFile: "./apikey.json", // Path to your Google service account key file
-      scopes: ["https://www.googleapis.com/auth/drive"],
-    });
-    const drive = google.drive({ version: "v3", auth });
+    // const auth = new google.auth.GoogleAuth({
+    //   credentials: ServiceAccount,
+    //   // keyFile: "./apikey.json", // Path to your Google service account key file
+    //   scopes: ["https://www.googleapis.com/auth/drive"],
+    // });
+    // const drive = google.drive({ version: "v3", auth });
 
-    // Convert PDF buffer into a readable stream
-    const bufferStream = new Readable();
-    bufferStream.push(pdfBuffer);
-    bufferStream.push(null);
+    // // Convert PDF buffer into a readable stream
+    // const bufferStream = new Readable();
+    // bufferStream.push(pdfBuffer);
+    // bufferStream.push(null);
 
-    // Folder ID in Google Drive
-    const folderId = "1Trbtp9gwGwNF_3KNjNcfL0DHeSUp0HyV";
+    // // Folder ID in Google Drive
+    // const folderId = "1MKYZ4fIUzERPyYzL_8I101agWemxVXts";
 
     // Upload PDF to Google Drive
     try {
-      const driveFile = await drive.files.create({
-        resource: {
-          name: `DoctorAdvice_${patientId}.pdf`,
-          parents: [folderId],
-        },
-        media: {
-          mimeType: "application/pdf",
-          body: bufferStream,
-        },
-        fields: "id, webViewLink",
-      });
-
+      // const driveFile = await drive.files.create({
+      //   resource: {
+      //     name: `DoctorAdvice_${patientId}.pdf`,
+      //     parents: [folderId],
+      //   },
+      //   media: {
+      //     mimeType: "application/pdf",
+      //     body: bufferStream,
+      //   },
+      //   fields: "id, webViewLink",
       // Extract file's public link
-      const fileLink = driveFile.data.webViewLink;
+      // const fileLink = driveFile.data.webViewLink;
 
       return res.status(200).json({
         message: "Doctor advice generated successfully.",
-        fileLink: fileLink,
+        fileLink: driveLink,
       });
     } catch (error) {
       return res.status(500).json({
@@ -2249,7 +2258,29 @@ export const getDoctorAdvic1 = async (req, res) => {
         error: error.message,
       });
     }
-    // });
+
+    // try {
+    //   const result = await new Promise((resolve, reject) => {
+    //     const uploadStream = cloudinary.v2.uploader.upload_stream(
+    //       { resource_type: "auto", folder: "doctor_advices" },
+    //       (error, result) => {
+    //         if (error) reject(error);
+    //         else resolve(result);
+    //       }
+    //     );
+    //     bufferStream.pipe(uploadStream);
+    //   });
+    //   console.log(result.secure_url);
+    //   return res.status(200).json({
+    //     message: "Doctor advice generated successfully.",
+    //     fileLink: result.secure_url,
+    //   });
+    // } catch (error) {
+    //   return res.status(500).json({
+    //     message: "Failed to upload PDF to Cloudinary",
+    //     error: error.message,
+    //   });
+    // }
   } catch (error) {
     console.error("Error generating doctor advice:", error);
     return res

@@ -150,7 +150,7 @@ fs.readFile("./test.json", "utf8", (err, data) => {
 // Endpoint for search suggestions
 app.get("/search", (req, res) => {
   const query = req.query.q?.toLowerCase(); // Get the query parameter
-  const limit = parseInt(req.query.limit) || 5; // Get the limit parameter, default to 1 if not provided
+  const limit = parseInt(req.query.limit) || 3; // Get the limit parameter, default to 1 if not provided
 
   if (!query) {
     return res.status(400).json({ error: "Query parameter is required" });
