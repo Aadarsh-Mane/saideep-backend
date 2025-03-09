@@ -1,0 +1,3 @@
+[submodule "ai-healthcare"]
+	path = ai-healthcare
+	url = https://github.com/Aadarsh-Mane/ai-healthcare.git
