@@ -1,5 +1,4 @@
 import express from "express";
-import { connectDB } from "./dbConnect.js";
 import userRouter from "./routes/users.js";
 import receiptionRouter from "./routes/reception.js";
 import doctorRouter from "./routes/doctor.js";
@@ -8,6 +7,7 @@ import puppeteer from "puppeteer";
 import nurseRouter from "./routes/nurse.js";
 import cors from "cors";
 import labRouter from "./routes/lab.js";
+import { connectDB } from "./ai-healthcare/backend/dbConnect.js";
 import { getPatientHistory } from "./controllers/doctorController.js";
 import { getFcmToken } from "./controllers/notifyController.js";
 import { auth } from "./middleware/auth.js";
