@@ -24,6 +24,7 @@ import {
   listPatients,
 } from "../controllers/admin/receiptionController.js";
 import {
+  deleteDoctor,
   signinDoctor,
   signupDoctor,
   signupNurse,
@@ -33,6 +34,7 @@ import upload from "../helpers/multer.js";
 const receiptionRouter = express.Router();
 
 receiptionRouter.post("/addDoctor", upload.single("image"), signupDoctor);
+receiptionRouter.delete("/deleteDoctor/:doctorId", deleteDoctor);
 receiptionRouter.post("/addNurse", signupNurse);
 receiptionRouter.post("/addPatient", upload.single("image"), addPatient);
 receiptionRouter.get("/listDoctors", listDoctors);
