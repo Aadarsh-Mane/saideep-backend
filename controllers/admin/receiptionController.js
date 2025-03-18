@@ -1997,7 +1997,7 @@ export const getDoctorAdvic1 = async (req, res) => {
 
     // Generate HTML content for the PDF
     const doctorAdviceHtml = `
-    <!DOCTYPE html>
+     <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -2044,54 +2044,60 @@ export const getDoctorAdvic1 = async (req, res) => {
             margin-right: 20px;
         }
         
-        .section {
-            display: flex;
+        .horizontal-section {
             justify-content: space-between;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
-        .left, .right {
-            width: 48%;
+        .horizontal-section > div {
+            flex: 1;
+            margin-right: 20px;
         }
         
-        h2 {
-            font-size: 16px;
-            margin: 10px 0;
-            border-bottom: 1px solid #000;
-            padding-bottom: 5px;
+        .horizontal-section > div:last-child {
+            margin-right: 0;
         }
         
-        ul {
+        .horizontal-section ul {
+            display: flex;
             list-style-type: none;
             padding: 0;
         }
-        
-        li {
-            margin: 5px 0;
+        .vitals {
+            display: flex;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        .vitals p {
+            margin-right: 10px;
+        }
+        .horizontal-section li {
+            margin: 2px 0;
             font-size: 14px;
         }
         
-        .prescription-table {
-            width: 100%;
-            border-collapse: collapse;
+        .prescription-section {
             margin-bottom: 20px;
         }
         
-        .prescription-table th, .prescription-table td {
-            border: 1px solid #000;
-            padding: 8px;
-            text-align: left;
+        .prescription-item {
+            justify-content: space-between;
+            margin-bottom: 10px;
             font-size: 14px;
         }
         
-        .prescription-table th {
-            background-color: #f2f2f2;
+        .prescription-item div {
+            padding: 4px;
+            margin-right: 20px;
+        }
+        
+        .prescription-item div:last-child {
+            margin-right: 0;
         }
         
         .footer {
             text-align: center;
             font-size: 14px;
-            margin-top: 20px;
         }
         
     </style>
@@ -2099,7 +2105,7 @@ export const getDoctorAdvic1 = async (req, res) => {
 <body>
     <div class="container">
         <div class="header">
-            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1737924501/Spandan_Hospital_nriqjl.png" alt="header">
+            <img src="https://res.cloudinary.com/dnznafp2a/image/upload/v1736544247/cb6bdlgforsw3al3tz5l.png" alt="header">
         </div>
         <div class="details">
             <div class="details-row">
@@ -2108,72 +2114,61 @@ export const getDoctorAdvic1 = async (req, res) => {
                 <p><strong>Gender:</strong> ${response.gender}</p>
             </div>
             <div class="details-row">
-             <p><strong>Weight:</strong> ${response.weight} kg</p>
-
+                <p><strong>Weight:</strong> ${response.weight} kg</p>
                 <p><strong>Date:</strong> ${new Date(
                   response.admissionDate
                 ).toLocaleDateString()}</p>
                 <p><strong>Doctor:</strong> ${response.doctor}</p>
             </div>
-
         </div>
-        <div class="section">
-            <div class="left">
-                <h2>Vitals</h2>
-                <ul>
+        <div class="horizontal-section">
+            <div>
+                <h3>Vitals</h3>
+                <div class="vitals">
                     ${response.vitals
                       .map(
                         (vital) => `
-                        <li>Temperature: ${vital.temperature} °C</li>
-                        <li>Pulse: ${vital.pulse} bpm</li>
-                        <li>BP: ${vital.bloodPressure}</li>
-                        <li>BSL: ${vital.bloodSugarLevel}</li>
-                        <li>Other: ${vital.other}</li>
-                        <li>Recorded At: ${new Date(
-                          vital.recordedAt
-                        ).toLocaleString()}</li>
+                        <p>Temp: ${vital.temperature} °F</p>
+                        <p>Pulse: ${vital.pulse} bpm</p>
+                        <p>BP:${vital.bp} </p>
+                        <p>BSL:${vital.bsl} </p>
+                        <p>Other:${vital.other} </p>
                     `
                       )
-                      .join("")}
-                </ul>
-                <h2>Symptoms</h2>
+                      .join("")} 
+                </div>
+            </div>
+            <div>
+                <h3>Symptoms</h3>
                 <ul>
                     ${response.symptoms
                       .map((symptom) => `<li>${symptom}</li>`)
                       .join("")}
                 </ul>
-                <h2>Diagnosis</h2>
+            </div>
+            <div>
+                <h3>Diagnosis</h3>
                 <ul>
                     ${response.diagnosis
                       .map((diagnosis) => `<li>${diagnosis}</li>`)
                       .join("")}
                 </ul>
             </div>
-            <div class="right">
-                <h2>Prescriptions</h2>
-                <table class="prescription-table">
-                    <thead>
-                        <tr>
-                            <th>Medicine</th>
-                            <th>Dosage</th>
-                            <th>Comments</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${response.prescriptions
-                          .map(
-                            (prescription) => `
-                        <tr>
-                            <td>${prescription.medicine.name}</td>
-                            <td>M: ${prescription.medicine.morning} / A: ${prescription.medicine.afternoon} / N: ${prescription.medicine.night}</td>
-                            <td>${prescription.medicine.comment}</td>
-                        </tr>
-                        `
-                          )
-                          .join("")}
-                    </tbody>
-                </table>
+        </div>
+        <div class="prescription-section">
+            <h2>Prescriptions</h2>
+            ${response.prescriptions
+              .map(
+                (prescription) => `
+            <div class="prescription-item">
+            <h3><strong>${prescription.medicine.name}</strong></h3>
+            <div><strong>Morning / सकाळी:</strong> ${prescription.medicine.morning} , <strong>Afternoon / दुपार:</strong> ${prescription.medicine.afternoon} , <strong>Night / रात्री:</strong> ${prescription.medicine.night}</div>
+            <div><strong>Comments:</strong> ${prescription.frequency}</div>
             </div>
+            `
+              )
+              .join("")}
+        </div>
         </div>
         <div class="footer">
             <p>20s Developers</p>
