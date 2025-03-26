@@ -130,7 +130,47 @@ const admissionRecordSchema = new mongoose.Schema({
       recordedAt: { type: Date, default: Date.now }, // Timestamp for when the vitals were recorded
     },
   ],
-
+  doctorNotes: [
+    {
+      text: { type: String }, // The note written by the doctor
+      doctorName: { type: String },
+      time: { type: String }, // Time of the note
+      date: { type: String }, // Date of the note
+    },
+  ],
+  medications: [
+    {
+      name: { type: String, required: true }, // Example: Paracetamol 500mg
+      dosage: { type: String }, // Example: Every 6 hours for 3 days
+      type: { type: String, enum: ["Oral", "Injection", "IV"] }, // Type of medication
+      date: { type: String },
+      time: { type: String },
+    },
+  ],
+  ivFluids: [
+    {
+      name: { type: String, required: true }, // Example: 0.9% Normal Saline
+      quantity: { type: String }, // Example: 500ml
+      duration: { type: String }, // Example: Over 4 hours
+      date: { type: String },
+      time: { type: String },
+    },
+  ],
+  procedures: [
+    {
+      name: { type: String, required: true }, // Example: Dressing change
+      frequency: { type: String }, // Example: Every 24 hours
+      date: { type: String },
+      time: { type: String },
+    },
+  ],
+  specialInstructions: [
+    {
+      instruction: { type: String, required: true }, // Example: Monitor BP every 2 hours
+      date: { type: String },
+      time: { type: String },
+    },
+  ],
   diagnosisByDoctor: { type: [String] }, // Array to store diagnoses added by the doctor
 });
 

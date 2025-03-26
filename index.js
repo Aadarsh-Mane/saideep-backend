@@ -32,8 +32,8 @@ app.use("/nurse", nurseRouter);
 app.use("/labs", labRouter);
 app.get("/patientHistory/:patientId", getPatientHistory);
 
-app.get("/", (req, res) => {
-  return res.status(200).json("Welcome to Ai in HealthCare v4");
+app.get("/ ", (req, res) => {
+  return res.status(200).json("Welcome to Ai in HealthCare v5");
 });
 app.post("/generateDischargeSummary", async (req, res) => {
   const patientData = req.body; // Patient details sent from Flutter

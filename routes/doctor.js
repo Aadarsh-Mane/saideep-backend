@@ -3,6 +3,8 @@ import {
   addConsultant,
   addDiagnosisByDoctor,
   addDoctorConsultant,
+  addDoctorTreatment,
+  addNotes,
   addPrescription,
   addSymptomsByDoctor,
   addVitals,
@@ -13,12 +15,15 @@ import {
   askQuestionAI,
   assignPatientToLab,
   deleteDiagnosis,
+  deleteDoctorTreatment,
   deletedPrescription,
   deletedVitals,
+  deleteNote,
   deleteSymptom,
   dischargePatient,
   fetchConsultant,
   fetchDiagnosis,
+  fetchNotes,
   fetchPrescription,
   fetchSymptoms,
   fetchVitals,
@@ -30,6 +35,7 @@ import {
   getDischargedPatientsByDoctor,
   getDoctorConsulting,
   getDoctorProfile,
+  getDoctorTreatment,
   getPatientHistory1,
   getPatients,
   getPatientsAssignedByDoctor,
@@ -99,6 +105,15 @@ doctorRouter.get("/getPatientHistory1/:patientId", getPatientHistory1);
 doctorRouter.get("/suggestions", suggestions);
 doctorRouter.post("/ask-question", askQuestion);
 doctorRouter.post("/ask-ai", askQuestionAI);
+doctorRouter.post("/addNotes", auth, addNotes);
+doctorRouter.delete("/deleteNote", deleteNote);
+doctorRouter.get("/fetchNotes/:patientId/:admissionId", fetchNotes);
+doctorRouter.post("/addDoctorTreatment", addDoctorTreatment);
+doctorRouter.get(
+  "/getDoctorTreatment/:patientId/:admissionId",
+  getDoctorTreatment
+);
+doctorRouter.delete("/deleteDoctorTreatment", deleteDoctorTreatment);
 
 // userRouter.get("/profile", auth, getUserProfile);
 // userRouter.patch("/edit-profile", auth, upload.single("image"), editProfile);

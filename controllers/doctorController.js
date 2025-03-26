@@ -7,6 +7,7 @@ import { fileURLToPath } from "url";
 import { dirname } from "path";
 import puppeteer from "puppeteer";
 import path from "path";
+
 // import fs from "fs";
 import fs from "fs/promises";
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -1549,6 +1550,304 @@ export const deleteDiagnosis = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting diagnosis:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const addNotes = async (req, res) => {
+  const doctorId = req.userId;
+  try {
+    const { patientId, admissionId, text, date } = req.body;
+
+    if (!patientId || !admissionId || !text || !date) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+    const doctor = await hospitalDoctors.findById(doctorId);
+    if (!doctor) {
+      return res.status(401).json({ message: "Unauthorized." });
+    }
+
+    // Find the patient
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
+    // Find the admission record
+    const admissionRecord = patient.admissionRecords.id(admissionId);
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    // Add the new doctor note
+    admissionRecord.doctorNotes.push({
+      text,
+      doctorName: doctor.doctorName, // Add doctor's name
+      date,
+    });
+
+    // Save the updated patient document
+    await patient.save();
+
+    res.status(200).json({
+      message: "Doctor note added successfully.",
+      doctorNotes: admissionRecord.doctorNotes,
+    });
+  } catch (error) {
+    console.error("Error adding doctor note:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+export const deleteNote = async (req, res) => {
+  try {
+    const { patientId, admissionId, noteId } = req.body;
+
+    if (!patientId || !admissionId || !noteId) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    // Find the patient
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
+    // Find the admission record
+    const admissionRecord = patient.admissionRecords.id(admissionId);
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    // Find the index of the note to be deleted
+    const noteIndex = admissionRecord.doctorNotes.findIndex(
+      (note) => note._id.toString() === noteId
+    );
+
+    if (noteIndex === -1) {
+      return res.status(404).json({ message: "Doctor note not found." });
+    }
+
+    // Remove the note from the array
+    admissionRecord.doctorNotes.splice(noteIndex, 1);
+
+    // Save the updated patient document
+    await patient.save();
+
+    res.status(200).json({
+      message: "Doctor note deleted successfully.",
+      doctorNotes: admissionRecord.doctorNotes,
+    });
+  } catch (error) {
+    console.error("Error deleting doctor note:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+export const fetchNotes = async (req, res) => {
+  try {
+    const { patientId, admissionId } = req.params;
+    console.log(req.params);
+    if (!patientId || !admissionId) {
+      return res
+        .status(400)
+        .json({ message: "Patient ID and Admission ID are required." });
+    }
+
+    // Check if the doctor exists
+
+    // Find the patient
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found." });
+    }
+
+    // Find the admission record
+    const admissionRecord = patient.admissionRecords.id(admissionId);
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found." });
+    }
+
+    // Return doctor notes
+    res.status(200).json({
+      message: "Doctor notes fetched successfully.",
+      doctorNotes: admissionRecord.doctorNotes,
+    });
+  } catch (error) {
+    console.error("Error fetching doctor notes:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+export const addDoctorTreatment = async (req, res) => {
+  try {
+    const {
+      patientId,
+      admissionId,
+      medications,
+      ivFluids,
+      procedures,
+      specialInstructions,
+    } = req.body;
+    const doctorId = req.userId; // Doctor ID from authentication middleware
+
+    // Find the patient by patientId
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record
+    const admissionRecord = patient.admissionRecords.find(
+      (record) => record._id.toString() === admissionId
+    );
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Get current date and time in IST format
+    const nowIST = moment().tz("Asia/Kolkata");
+    const formattedDate = nowIST.format("YYYY-MM-DD");
+    const formattedTime = nowIST.format("HH:mm:ss");
+
+    // Append the new data if provided with IST timestamp
+    if (medications) {
+      medications.forEach((med) => {
+        admissionRecord.medications.push({
+          ...med,
+          date: formattedDate,
+          time: formattedTime,
+        });
+      });
+    }
+    if (ivFluids) {
+      ivFluids.forEach((fluid) => {
+        admissionRecord.ivFluids.push({
+          ...fluid,
+          date: formattedDate,
+          time: formattedTime,
+        });
+      });
+    }
+    if (procedures) {
+      procedures.forEach((proc) => {
+        admissionRecord.procedures.push({
+          ...proc,
+          date: formattedDate,
+          time: formattedTime,
+        });
+      });
+    }
+    if (specialInstructions) {
+      specialInstructions.forEach((inst) => {
+        admissionRecord.specialInstructions.push({
+          ...inst,
+          date: formattedDate,
+          time: formattedTime,
+        });
+      });
+    }
+
+    // Save the updated patient document
+    await patient.save();
+
+    res.status(200).json({
+      message: "Doctor treatment details added successfully",
+      admissionRecord,
+    });
+  } catch (error) {
+    console.error("Error adding doctor treatment details:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const getDoctorTreatment = async (req, res) => {
+  console.log("getDoctorTreatment");
+  try {
+    const { patientId, admissionId } = req.params;
+
+    // Find the patient by patientId
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record
+    const admissionRecord = patient.admissionRecords.find(
+      (record) => record._id.toString() === admissionId
+    );
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Extract relevant details
+    const response = {
+      medications: admissionRecord.medications || [],
+      ivFluids: admissionRecord.ivFluids || [],
+      procedures: admissionRecord.procedures || [],
+      specialInstructions: admissionRecord.specialInstructions || [],
+    };
+
+    res.status(200).json({
+      message: "Doctor Treatment fetched successfully",
+      data: response,
+    });
+  } catch (error) {
+    console.error("Error fetching doctor treatment:", error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+export const deleteDoctorTreatment = async (req, res) => {
+  try {
+    const { patientId, admissionId, treatmentType, treatmentId } = req.body;
+
+    // Find the patient by patientId
+    const patient = await patientSchema.findOne({ patientId });
+
+    if (!patient) {
+      return res.status(404).json({ message: "Patient not found" });
+    }
+
+    // Find the specific admission record
+    const admissionRecord = patient.admissionRecords.find(
+      (record) => record._id.toString() === admissionId
+    );
+
+    if (!admissionRecord) {
+      return res.status(404).json({ message: "Admission record not found" });
+    }
+
+    // Treatment types mapping
+    const treatmentMapping = {
+      medications: admissionRecord.medications,
+      ivFluids: admissionRecord.ivFluids,
+      procedures: admissionRecord.procedures,
+      specialInstructions: admissionRecord.specialInstructions,
+    };
+
+    if (!treatmentMapping[treatmentType]) {
+      return res.status(400).json({ message: "Invalid treatment type" });
+    }
+
+    // Remove the specific treatment item
+    admissionRecord[treatmentType] = admissionRecord[treatmentType].filter(
+      (item) => item._id.toString() !== treatmentId
+    );
+
+    // Save the updated patient document
+    await patient.save();
+
+    res.status(200).json({
+      message: `${treatmentType} deleted successfully`,
+      updatedAdmissionRecord: admissionRecord,
+    });
+  } catch (error) {
+    console.error("Error deleting doctor treatment:", error);
     res.status(500).json({ message: "Internal server error" });
   }
 };
